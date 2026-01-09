@@ -4,7 +4,7 @@ Tags: security, plugins, monitoring, notifications
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.7.5
+Stable tag: 1.7.5.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -103,6 +103,13 @@ Recommended workflow: on CI/CD platforms, add a job step that boots your WordPre
 The development repository is available on GitHub: https://github.com/happyloa/Site-Add-on-Watchdog. Clone it locally to review the source or run the test suite.
 
 == Changelog ==
+
+= 1.7.5.1 =
+* Add proper PHPDoc type hints to the Risk model for better IDE support.
+* Fix mixed-language string in admin template for consistent internationalization.
+* Add CHANGELOG.md for easier version history tracking on GitHub.
+* Add translation template file (languages/site-add-on-watchdog.pot) for translators.
+* Sync Version constant with plugin metadata.
 
 = 1.7.5 =
 * Remove the custom View details plugin row link to avoid duplicating WordPress output.
