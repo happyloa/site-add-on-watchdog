@@ -4,6 +4,14 @@ namespace Watchdog\Models;
 
 class Risk
 {
+    /**
+     * @param string $pluginSlug    Plugin directory slug.
+     * @param string $pluginName    Human-readable plugin name.
+     * @param string $localVersion  Installed version string.
+     * @param string|null $remoteVersion Latest version available in the directory.
+     * @param string[] $reasons     List of risk reason messages.
+     * @param array<string, mixed> $details Additional details such as vulnerabilities.
+     */
     public function __construct(
         public readonly string $pluginSlug,
         public readonly string $pluginName,

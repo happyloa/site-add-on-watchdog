@@ -64,7 +64,7 @@ $watchdogActionPrefix = $watchdogActionPrefix ?? \Watchdog\Version::PREFIX;
     <?php endif; ?>
 
     <?php if (empty($watchdogCronSecretPersisted)) : ?>
-        <div class="notice notice-warning"><p><?php esc_html_e('cron secret 尚未初始化或無法儲存，請重新保存設定', 'site-add-on-watchdog'); ?></p></div>
+        <div class="notice notice-warning"><p><?php esc_html_e('Cron secret has not been initialized or could not be saved. Please try saving the settings again.', 'site-add-on-watchdog'); ?></p></div>
     <?php endif; ?>
 
     <?php if (! empty($watchdogWpScanError) && is_array($watchdogWpScanError)) : ?>
