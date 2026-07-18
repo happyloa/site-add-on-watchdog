@@ -10,6 +10,7 @@
 /** @var string $watchdogCronEndpoint */
 /** @var string|null $watchdogSettingsError */
 /** @var array|null $watchdogWpScanError */
+/** @var string|false $watchdogScanError */
 /** @var array|null $watchdogLastFailedNotification */
 /** @var array{length:int,next_attempt_at:?int} $watchdogQueueStatus */
 /** @var string $watchdogActionPrefix */
@@ -63,6 +64,10 @@ $watchdogActionPrefix = $watchdogActionPrefix ?? \Watchdog\Version::PREFIX;
 
     <?php if (! empty($watchdogSettingsError)) : ?>
         <div class="notice notice-error is-dismissible"><p><?php echo esc_html($watchdogSettingsError); ?></p></div>
+    <?php endif; ?>
+
+    <?php if (is_string($watchdogScanError) && $watchdogScanError !== '') : ?>
+        <div class="notice notice-error is-dismissible"><p><?php echo esc_html($watchdogScanError); ?></p></div>
     <?php endif; ?>
 
     <?php if (empty($watchdogCronSecretPersisted)) : ?>

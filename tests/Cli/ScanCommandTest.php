@@ -42,6 +42,7 @@ class ScanCommandTest extends TestCase
         parent::setUp();
 
         WP_CLI::reset();
+        when('delete_transient')->justReturn(true);
     }
 
     public function testCommandRunsScanAndNotifiesByDefault(): void

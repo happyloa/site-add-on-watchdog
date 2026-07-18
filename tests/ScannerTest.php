@@ -8,6 +8,15 @@ use Watchdog\Services\WPScanClient;
 
 class ScannerTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Functions\when('get_transient')->justReturn(false);
+        Functions\when('set_transient')->justReturn(true);
+        Functions\when('sanitize_key')->alias(static fn ($value) => strtolower((string) $value));
+    }
+
     public function testDetectsVersionAndChangelogRisks(): void
     {
         Functions\when('get_plugins')->justReturn([
@@ -187,5 +196,42 @@ class ScannerTest extends TestCase
         $this->assertSame('Severe', $risks[0]->details['vulnerabilities'][0]['severity_label']);
         $this->assertSame('medium', $risks[0]->details['vulnerabilities'][1]['severity']);
         $this->assertSame('Medium', $risks[0]->details['vulnerabilities'][1]['severity_label']);
+    }
+
+    public function testOnePluginFailureDoesNotAbortRemainingScan(): void
+    {
+        Functions\when('get_plugins')->justReturn([
+            'broken/broken.php' => ['Name' => 'Broken Plugin', 'Version' => '1.0.0'],
+            'healthy/healthy.php' => ['Name' => 'Healthy Plugin', 'Version' => '1.0.0'],
+        ]);
+        Functions\when('sanitize_title')->alias(static fn ($value) => $value);
+        Functions\when('__')->alias(static fn ($text) => $text);
+        Functions\when('get_option')->alias(static fn () => []);
+        Functions\when('plugins_api')->justReturn((object) [
+            'version' => '1.1.0',
+            'sections' => ['changelog' => '<h4>1.1.0</h4><p>Maintenance</p>'],
+        ]);
+
+        $repository = new RiskRepository();
+        $wpscanClient = new class extends WPScanClient {
+            public function __construct()
+            {
+            }
+
+            public function fetchVulnerabilities(string $pluginSlug): array
+            {
+                if ($pluginSlug === 'broken') {
+                    throw new RuntimeException('Malformed provider response');
+                }
+
+                return [];
+            }
+        };
+
+        $scanner = new Scanner($repository, new VersionComparator(), $wpscanClient);
+        $risks = $scanner->scan();
+
+        self::assertCount(1, $risks);
+        self::assertSame('healthy', $risks[0]->pluginSlug);
     }
 }

@@ -6,9 +6,12 @@ use Watchdog\Models\Risk;
 use Watchdog\Repository\RiskRepository;
 use Watchdog\Services\VersionComparator;
 use Watchdog\Services\WPScanClient;
+use Watchdog\Version;
 
 class Scanner
 {
+    private const REMOTE_CACHE_HOURS = 6;
+
     public function __construct(
         private readonly RiskRepository $riskRepository,
         private readonly VersionComparator $versionComparator,
@@ -30,82 +33,107 @@ class Scanner
 
         $risks = [];
         foreach ($plugins as $pluginFile => $pluginData) {
+            if (! is_string($pluginFile) || ! is_array($pluginData)) {
+                continue;
+            }
+
             $slug = $this->determineSlug($pluginFile);
             if (in_array($slug, $ignored, true)) {
                 continue;
             }
 
-            $remote = $this->fetchRemoteData($slug);
-            $reasons = [];
-            $details = [];
-
-            $localVersion  = $pluginData['Version'] ?? '';
-            $remoteVersion = is_object($remote) && isset($remote->version) ? (string) $remote->version : null;
-
-            if (
-                $remoteVersion &&
-                $localVersion &&
-                version_compare($remoteVersion, $localVersion, '>')
-            ) {
-                $reasons[] = __(
-                    'An update is available in the plugin directory.',
-                    'site-add-on-watchdog'
-                );
+            try {
+                $risk = $this->scanPlugin($slug, $pluginData);
+            } catch (\Throwable $error) {
+                $this->recordPluginScanError($slug, $error);
+                continue;
             }
 
-            if (
-                $remoteVersion &&
-                $localVersion &&
-                $this->versionComparator->isTwoMinorVersionsBehind($localVersion, $remoteVersion)
-            ) {
-                $reasons[] = __(
-                    'Local version is more than two minor releases behind the directory version.',
-                    'site-add-on-watchdog'
-                );
-            }
-
-            if (
-                $remote &&
-                isset($remote->sections['changelog']) &&
-                $this->changelogHighlightsSecurity(
-                    (string) $remote->sections['changelog'],
-                    $localVersion,
-                    $remoteVersion
-                )
-            ) {
-                $reasons[] = __(
-                    'Changelog mentions security-related updates.',
-                    'site-add-on-watchdog'
-                );
-            }
-
-            $vulnerabilities = $this->wpscanClient->fetchVulnerabilities($slug);
-            if (! empty($vulnerabilities)) {
-                $vulnerabilities = array_map(
-                    fn (array $vulnerability): array => $this->enrichVulnerability($vulnerability),
-                    $vulnerabilities
-                );
-
-                $reasons[] = __(
-                    'Active vulnerabilities reported by WPScan.',
-                    'site-add-on-watchdog'
-                );
-                $details['vulnerabilities'] = $vulnerabilities;
-            }
-
-            if (! empty($reasons)) {
-                $risks[] = new Risk(
-                    $slug,
-                    $pluginData['Name'] ?? $slug,
-                    $localVersion,
-                    $remoteVersion,
-                    $reasons,
-                    $details
-                );
+            if ($risk !== null) {
+                $risks[] = $risk;
             }
         }
 
         return $risks;
+    }
+
+    /**
+     * @param array<string, mixed> $pluginData
+     */
+    private function scanPlugin(string $slug, array $pluginData): ?Risk
+    {
+        $remote         = $this->fetchRemoteData($slug);
+        $reasons        = [];
+        $details        = [];
+        $localVersion   = isset($pluginData['Version']) ? (string) $pluginData['Version'] : '';
+        $remoteVersion  = is_object($remote) && isset($remote->version) ? (string) $remote->version : null;
+
+        if (
+            $remoteVersion &&
+            $localVersion &&
+            version_compare($remoteVersion, $localVersion, '>')
+        ) {
+            $reasons[] = __(
+                'An update is available in the plugin directory.',
+                'site-add-on-watchdog'
+            );
+        }
+
+        if (
+            $remoteVersion &&
+            $localVersion &&
+            $this->versionComparator->isTwoMinorVersionsBehind($localVersion, $remoteVersion)
+        ) {
+            $reasons[] = __(
+                'Local version is more than two minor releases behind the directory version.',
+                'site-add-on-watchdog'
+            );
+        }
+
+        if (
+            $remote &&
+            isset($remote->sections['changelog']) &&
+            $this->changelogHighlightsSecurity(
+                (string) $remote->sections['changelog'],
+                $localVersion,
+                $remoteVersion
+            )
+        ) {
+            $reasons[] = __(
+                'Changelog mentions security-related updates.',
+                'site-add-on-watchdog'
+            );
+        }
+
+        $vulnerabilities = array_values(array_filter(
+            $this->wpscanClient->fetchVulnerabilities($slug),
+            'is_array'
+        ));
+        if ($vulnerabilities !== []) {
+            $vulnerabilities = array_map(
+                fn (array $vulnerability): array => $this->enrichVulnerability($vulnerability),
+                $vulnerabilities
+            );
+
+            $reasons[] = __(
+                'Active vulnerabilities reported by WPScan.',
+                'site-add-on-watchdog'
+            );
+            $details['vulnerabilities'] = $vulnerabilities;
+        }
+
+        if ($reasons === []) {
+            return null;
+        }
+
+        return new Risk(
+            $slug,
+            isset($pluginData['Name']) ? (string) $pluginData['Name'] : $slug,
+            $localVersion,
+            $remoteVersion,
+            $reasons,
+            $details
+        );
     }
 
     private function enrichVulnerability(array $vulnerability): array
@@ -182,21 +210,53 @@ class Scanner
 
     private function fetchRemoteData(string $slug): object|false
     {
+        $cacheKey = Version::PREFIX . '_plugin_info_' . sanitize_key($slug);
+        $cached   = get_transient($cacheKey);
+        if (is_object($cached)) {
+            return $cached;
+        }
+        if (is_array($cached) && ! empty($cached['not_found'])) {
+            return false;
+        }
+
         require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
 
         $result = plugins_api('plugin_information', [
             'slug'   => $slug,
             'fields' => [
                 'sections' => true,
-                'versions' => true,
+                'versions' => false,
             ],
         ]);
 
         if (is_wp_error($result)) {
+            set_transient($cacheKey, ['not_found' => true], $this->remoteCacheTtl());
             return false;
         }
 
+        set_transient($cacheKey, $result, $this->remoteCacheTtl());
+
         return $result;
+    }
+
+    private function remoteCacheTtl(): int
+    {
+        $hour = defined('HOUR_IN_SECONDS') ? HOUR_IN_SECONDS : 3600;
+
+        return self::REMOTE_CACHE_HOURS * $hour;
+    }
+
+    private function recordPluginScanError(string $slug, \Throwable $error): void
+    {
+        if (! defined('WP_DEBUG') || ! WP_DEBUG) {
+            return;
+        }
+
+        error_log(sprintf(
+            '[Site Add-on Watchdog] Scan skipped for %s: %s',
+            sanitize_key($slug),
+            $error->getMessage()
+        ));
     }
 
     private function changelogHighlightsSecurity(

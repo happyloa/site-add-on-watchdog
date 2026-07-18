@@ -22,6 +22,7 @@ class Plugin
     private const LEGACY_CRON_STATUS_OPTION = 'wp_watchdog_cron_status';
     private const UPDATE_CHECK_OPTION = self::PREFIX . '_update_check_scan_at';
     private const LEGACY_UPDATE_CHECK_OPTION = 'wp_watchdog_update_check_scan_at';
+    private const SCAN_ERROR_TRANSIENT = self::PREFIX . '_scan_error';
 
     private const MANUAL_NOTIFICATION_INTERVAL = 60;
 
@@ -139,7 +140,27 @@ class Plugin
      */
     public function runScan(bool $notify = true, string $context = 'automatic'): bool
     {
-        $risks = $this->scanner->scan();
+        try {
+            $risks = $this->scanner->scan();
+        } catch (\Throwable $error) {
+            $expiration = defined('HOUR_IN_SECONDS') ? HOUR_IN_SECONDS : 3600;
+            set_transient(
+                self::SCAN_ERROR_TRANSIENT,
+                __(
+                    'The scan could not be completed. No saved results were changed; please try again.',
+                    'site-add-on-watchdog'
+                ),
+                $expiration
+            );
+
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[Site Add-on Watchdog] Scan failed: ' . $error->getMessage());
+            }
+
+            return false;
+        }
+
+        delete_transient(self::SCAN_ERROR_TRANSIENT);
         $settings = $this->settingsRepository->get();
         $retention = (int) ($settings['history']['retention'] ?? RiskRepository::DEFAULT_HISTORY_RETENTION);
         if ($retention < 1) {

@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Schedule the first scan in the background instead of making activation depend on remote services.
 - Align Slack, Discord, and Microsoft Teams webhook payloads with their current platform limits and formats.
 - Use WordPress safe HTTP requests for outgoing webhooks.
+- Cache WordPress.org plugin information and isolate failures to the affected plugin during scans.
 
 ### Fixed
 
@@ -22,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Validate every enabled notification channel and disable invalid settings instead of failing silently.
 - Add save-and-test actions for Email, Discord, Slack, Teams, and custom webhooks.
 - Redact webhook secrets from delivery errors and logs.
+- Preserve the previous saved report when a scan provider fails instead of replacing data or aborting the request.
 
 ## [1.7.5.1] - 2026-01-10
 

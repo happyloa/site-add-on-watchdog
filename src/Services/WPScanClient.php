@@ -52,12 +52,18 @@ class WPScanClient
         }
 
         $body = json_decode(wp_remote_retrieve_body($response), true);
-        if (! is_array($body) || empty($body['vulnerabilities'])) {
+        if (
+            ! is_array($body)
+            || ! isset($body['vulnerabilities'])
+            || ! is_array($body['vulnerabilities'])
+            || $body['vulnerabilities'] === []
+        ) {
             delete_transient($this->getErrorKey());
             set_transient($cacheKey, [], $this->getCacheTtl());
             return [];
         }
 
+        $rawVulnerabilities = array_values(array_filter($body['vulnerabilities'], 'is_array'));
         $vulnerabilities = array_map(
             static fn (array $vulnerability): array => [
                 'title'       => $vulnerability['title'] ?? '',
@@ -67,7 +73,7 @@ class WPScanClient
                 'cvss_score'  => $vulnerability['cvss_score'] ?? null,
                 'discovered'  => $vulnerability['discovered_date'] ?? null,
             ],
-            $body['vulnerabilities']
+            $rawVulnerabilities
         );
 
         delete_transient($this->getErrorKey());

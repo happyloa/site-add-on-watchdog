@@ -106,6 +106,10 @@ class AdminPage
         }
 
         $watchdogWpScanError = get_transient(self::PREFIX . '_wpscan_error');
+        $watchdogScanError = get_transient(self::PREFIX . '_scan_error');
+        if ($watchdogScanError !== false) {
+            delete_transient(self::PREFIX . '_scan_error');
+        }
 
         $watchdogHistoryRetention = (int) (
             $watchdogSettings['history']['retention'] ?? RiskRepository::DEFAULT_HISTORY_RETENTION

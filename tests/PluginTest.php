@@ -25,6 +25,13 @@ if (! class_exists('WP_REST_Request')) {
 
 class PluginTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        when('delete_transient')->justReturn(true);
+    }
+
     public function testScheduleTriggersOverdueCatchUpForTesting(): void
     {
         when('site_url')->justReturn('https://example.test');
@@ -381,5 +388,29 @@ class PluginTest extends TestCase
 
         $request = new WP_REST_Request(['key' => 'secret123']);
         self::assertTrue($plugin->validateCronRequest($request));
+    }
+
+    public function testScanFailurePreservesSavedResultsAndReturnsSafely(): void
+    {
+        $scanner = $this->createMock(Scanner::class);
+        $scanner->method('scan')->willThrowException(new RuntimeException('Provider unavailable'));
+
+        $riskRepository = $this->createMock(RiskRepository::class);
+        $riskRepository->expects(self::never())->method('save');
+        $settingsRepository = $this->createMock(SettingsRepository::class);
+        $notifier = $this->createMock(Notifier::class);
+
+        when('__')->alias(static fn ($message) => $message);
+        expect('set_transient')
+            ->once()
+            ->with(
+                'siteadwa_scan_error',
+                'The scan could not be completed. No saved results were changed; please try again.',
+                3600
+            );
+
+        $plugin = new Plugin($scanner, $riskRepository, $settingsRepository, $notifier);
+
+        self::assertFalse($plugin->runScan());
     }
 }
