@@ -6,6 +6,25 @@ use Watchdog\Repository\SettingsRepository;
 
 class SettingsRepositoryTest extends TestCase
 {
+    public function testGetPreservesPersistedCronSecret(): void
+    {
+        $stored = [
+            'notifications' => [
+                'frequency' => 'weekly',
+                'cron_secret' => 'existing-cron-secret',
+            ],
+        ];
+
+        Functions\when('get_option')->alias(static fn ($option, $default = false) => $option === 'siteadwa_settings'
+            ? $stored
+            : $default);
+        Functions\when('get_users')->justReturn([]);
+
+        $settings = (new SettingsRepository())->get();
+
+        self::assertSame('existing-cron-secret', $settings['notifications']['cron_secret']);
+    }
+
     public function testInvalidEnabledWebhookIsDisabledWhenSaved(): void
     {
         $stored = [

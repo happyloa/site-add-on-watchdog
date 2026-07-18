@@ -343,6 +343,7 @@ class SettingsRepository
             'frequency'      => $stored['notification_frequency'] ?? null,
             'wpscan_api_key' => $stored['wpscan_api_key'] ?? null,
             'last_manual_notification_at' => $stored['last_manual_notification_at'] ?? null,
+            'cron_secret' => $stored['cron_secret'] ?? null,
         ];
 
         $normalizedNotifications = [
@@ -375,6 +376,7 @@ class SettingsRepository
             'testing_expires_at' => $notifications['testing_expires_at'] ?? null,
             'last_manual_notification_at' => $notifications['last_manual_notification_at']
                 ?? $legacy['last_manual_notification_at'],
+            'cron_secret' => $notifications['cron_secret'] ?? $legacy['cron_secret'],
         ];
 
         $historyRetention = null;
