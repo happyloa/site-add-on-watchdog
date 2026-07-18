@@ -622,7 +622,7 @@ $watchdogFrequencyLabel = $watchdogFrequencyLabels[$watchdogCurrentFrequency]
                                                         <?php if (! empty($watchdogVuln['fixed_in'])) : ?>
                                                             <span class="wp-watchdog-vulnerability__fixed">(<?php
                                                             printf(
-                                                                /* translators: %s is a plugin version number */
+                                                                /* translators: %s: plugin version number. */
                                                                 esc_html__('Fixed in %s', 'site-add-on-watchdog'),
                                                                 esc_html($watchdogVuln['fixed_in'])
                                                             );

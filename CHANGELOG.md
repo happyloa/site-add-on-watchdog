@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add a new Watchdog icon and responsive WordPress.org banner set with reproducible asset tooling.
 - Add a distribution ignore manifest so development files and directory artwork stay out of installable packages.
+- Add a reproducible Windows release builder with WordPress-compatible ZIP paths and a Traditional Chinese TortoiseSVN release guide.
+- Regenerate the translation template for every 1.8.0 admin and notification string.
 
 ### Fixed
 
@@ -32,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Redact webhook secrets from delivery errors and logs.
 - Preserve the previous saved report when a scan provider fails instead of replacing data or aborting the request.
 - Register recurring schedules on `init` to avoid early translation loading notices on WordPress 6.7 and newer.
+- Preserve the external Cron secret across requests and upgrades so configured scheduler URLs remain valid.
 - Run continuous integration across PHP 8.1 through PHP 8.5.
 - Replace direct debug logging with a structured `site_add_on_watchdog_diagnostic` action for safe extensibility.
 - Use WordPress URL and text sanitization helpers consistently.

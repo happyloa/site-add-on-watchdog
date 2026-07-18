@@ -11,5 +11,6 @@
 /wordpress-org-assets
 /composer.json
 /composer.lock
+/dist
 /phpcs.xml
 /phpunit.xml.dist
