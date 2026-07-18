@@ -10,6 +10,7 @@ use Watchdog\Version;
 class Notifier
 {
     private const PREFIX = Version::PREFIX;
+    private const CHANNELS = ['email', 'discord', 'slack', 'teams', 'webhook'];
 
     public function __construct(
         private readonly SettingsRepository $settingsRepository,
@@ -22,102 +23,7 @@ class Notifier
      */
     public function notify(array $risks): void
     {
-        $settings        = $this->settingsRepository->get();
-        $notifications   = $settings['notifications'];
-        $emailSettings   = $notifications['email'];
-        $discordSettings = $notifications['discord'];
-        $slackSettings   = is_array($notifications['slack'] ?? null) ? $notifications['slack'] : [];
-        $teamsSettings   = is_array($notifications['teams'] ?? null) ? $notifications['teams'] : [];
-        $webhookSettings = $notifications['webhook'];
-        $plainTextReport = $this->formatPlainTextMessage($risks);
-        $emailReport     = $this->formatEmailMessage($risks);
-
-        $jobs = [];
-
-        if (! empty($emailSettings['enabled'])) {
-            $configuredRecipients = [];
-            if (! empty($emailSettings['recipients'])) {
-                $configuredRecipients = $this->parseRecipients($emailSettings['recipients']);
-            }
-
-            $recipients = $this->uniqueEmails(array_merge(
-                $configuredRecipients,
-                $this->getAdministratorEmails()
-            ));
-
-            if (! empty($recipients)) {
-                $jobs[] = [
-                    'channel'     => 'email',
-                    'description' => __('Email alert', 'site-add-on-watchdog'),
-                    'payload'     => [
-                        'recipients' => $recipients,
-                        'subject'    => __('Site Add-on Watchdog Risk Alert', 'site-add-on-watchdog'),
-                        'body'       => $emailReport,
-                        'headers'    => ['Content-Type: text/html; charset=UTF-8'],
-                    ],
-                ];
-            }
-        }
-
-        if (! empty($discordSettings['enabled']) && ! empty($discordSettings['webhook'])) {
-            $jobs[] = [
-                'channel'     => 'webhook',
-                'description' => __('Discord webhook', 'site-add-on-watchdog'),
-                'payload'     => [
-                    'url'    => $discordSettings['webhook'],
-                    'body'   => $this->formatDiscordMessage($risks, $plainTextReport),
-                    'secret' => null,
-                ],
-            ];
-        }
-
-        if (! empty($slackSettings['enabled']) && ! empty($slackSettings['webhook'])) {
-            $jobs[] = [
-                'channel'     => 'webhook',
-                'description' => __('Slack webhook', 'site-add-on-watchdog'),
-                'payload'     => [
-                    'url'    => $slackSettings['webhook'],
-                    'body'   => $this->formatSlackMessage($risks, $plainTextReport),
-                    'secret' => null,
-                ],
-            ];
-        }
-
-        if (! empty($teamsSettings['enabled']) && ! empty($teamsSettings['webhook'])) {
-            $jobs[] = [
-                'channel'     => 'webhook',
-                'description' => __('Microsoft Teams webhook', 'site-add-on-watchdog'),
-                'payload'     => [
-                    'url'    => $teamsSettings['webhook'],
-                    'body'   => $this->formatTeamsMessage($risks),
-                    'secret' => null,
-                ],
-            ];
-        }
-
-        if (! empty($webhookSettings['enabled']) && ! empty($webhookSettings['url'])) {
-            $jobs[] = [
-                'channel'     => 'webhook',
-                'description' => __('Custom webhook', 'site-add-on-watchdog'),
-                'payload'     => [
-                    'url'    => $webhookSettings['url'],
-                    'body'   => [
-                        'message' => $plainTextReport,
-                        'risks'   => array_map(static fn (Risk $risk): array => $risk->toArray(), $risks),
-                        'links'   => [
-                            'dashboard' => admin_url('admin.php?page=site-add-on-watchdog'),
-                            'updates'   => admin_url('update-core.php'),
-                        ],
-                        'meta'    => [
-                            'count'      => count($risks),
-                            'generated'  => time(),
-                            'source'     => 'Site Add-on Watchdog',
-                        ],
-                    ],
-                    'secret' => $webhookSettings['secret'] ?? null,
-                ],
-            ];
-        }
+        $jobs = $this->buildJobs($risks);
 
         if ($jobs === []) {
             return;
@@ -125,6 +31,142 @@ class Notifier
 
         $this->notificationQueue->enqueue($jobs);
         $this->processQueue();
+    }
+
+    /**
+     * Sends a no-risk test message through exactly one saved channel.
+     *
+     * @return 'sent'|'failed'|'not_configured'|'invalid_channel'
+     */
+    public function testChannel(string $channel): string
+    {
+        $channel = sanitize_key($channel);
+        if (! in_array($channel, self::CHANNELS, true)) {
+            return 'invalid_channel';
+        }
+
+        $jobs = $this->buildJobs([], $channel, false);
+        if ($jobs === []) {
+            return 'not_configured';
+        }
+
+        $job    = $jobs[0];
+        $result = $this->sendQueuedJob($job);
+
+        if ($result === true) {
+            return 'sent';
+        }
+
+        $job['last_error'] = $result;
+        $this->notificationQueue->recordFailure($job, time());
+
+        return 'failed';
+    }
+
+    /**
+     * @param Risk[] $risks
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildJobs(
+        array $risks,
+        ?string $onlyChannel = null,
+        bool $requireEnabled = true,
+    ): array {
+        $settings      = $this->settingsRepository->get();
+        $notifications = isset($settings['notifications']) && is_array($settings['notifications'])
+            ? $settings['notifications']
+            : [];
+        $plainTextReport = $this->formatPlainTextMessage($risks);
+        $jobs            = [];
+
+        $shouldBuild = static function (
+            string $channel,
+            array $channelSettings
+        ) use (
+            $onlyChannel,
+            $requireEnabled
+        ): bool {
+            if ($onlyChannel !== null && $onlyChannel !== $channel) {
+                return false;
+            }
+
+            return ! $requireEnabled || ! empty($channelSettings['enabled']);
+        };
+
+        $emailSettings = $this->channelSettings($notifications, 'email');
+        if ($shouldBuild('email', $emailSettings)) {
+            $configuredRecipients = ! empty($emailSettings['recipients'])
+                ? $this->parseRecipients((string) $emailSettings['recipients'])
+                : [];
+            $recipients = $this->uniqueEmails(array_merge(
+                $configuredRecipients,
+                $this->getAdministratorEmails()
+            ));
+
+            if ($recipients !== []) {
+                $jobs[] = [
+                    'channel_key' => 'email',
+                    'channel'     => 'email',
+                    'description' => __('Email alert', 'site-add-on-watchdog'),
+                    'payload'     => [
+                        'recipients' => $recipients,
+                        'subject'    => __('Site Add-on Watchdog Risk Alert', 'site-add-on-watchdog'),
+                        'body'       => $this->formatEmailMessage($risks),
+                        'headers'    => ['Content-Type: text/html; charset=UTF-8'],
+                    ],
+                ];
+            }
+        }
+
+        $webhookDefinitions = [
+            'discord' => [
+                'field' => 'webhook',
+                'description' => __('Discord webhook', 'site-add-on-watchdog'),
+                'formatter' => fn (): array => $this->formatDiscordMessage($risks, $plainTextReport),
+            ],
+            'slack' => [
+                'field' => 'webhook',
+                'description' => __('Slack webhook', 'site-add-on-watchdog'),
+                'formatter' => fn (): array => $this->formatSlackMessage($risks, $plainTextReport),
+            ],
+            'teams' => [
+                'field' => 'webhook',
+                'description' => __('Microsoft Teams webhook', 'site-add-on-watchdog'),
+                'formatter' => fn (): array => $this->formatTeamsMessage($risks, $plainTextReport),
+            ],
+            'webhook' => [
+                'field' => 'url',
+                'description' => __('Custom webhook', 'site-add-on-watchdog'),
+                'formatter' => fn (): array => $this->formatCustomWebhookMessage($risks, $plainTextReport),
+            ],
+        ];
+
+        foreach ($webhookDefinitions as $channel => $definition) {
+            $channelSettings = $this->channelSettings($notifications, $channel);
+            if (! $shouldBuild($channel, $channelSettings)) {
+                continue;
+            }
+
+            $url = isset($channelSettings[$definition['field']])
+                ? trim((string) $channelSettings[$definition['field']])
+                : '';
+            if ($url === '') {
+                continue;
+            }
+
+            $jobs[] = [
+                'channel_key' => $channel,
+                'channel'     => 'webhook',
+                'description' => $definition['description'],
+                'payload'     => [
+                    'url'    => $url,
+                    'body'   => $definition['formatter'](),
+                    'secret' => $channel === 'webhook' ? ($channelSettings['secret'] ?? null) : null,
+                ],
+            ];
+        }
+
+        return $jobs;
     }
 
     public function processQueue(): array
@@ -178,19 +220,22 @@ class Notifier
             $headers['X-Watchdog-Signature'] = 'sha256=' . hash_hmac('sha256', $encoded, $secret);
         }
 
-        $response = wp_remote_post($url, [
+        $response = wp_safe_remote_post($url, [
             'headers' => $headers,
             'body'    => $encoded,
             'timeout' => 10,
+            'redirection' => 3,
+            'user-agent' => 'Site Add-on Watchdog/' . Version::NUMBER . '; WordPress',
         ]);
 
         $expiration = defined('DAY_IN_SECONDS') ? DAY_IN_SECONDS : 86400;
 
         if (is_wp_error($response)) {
             $message = sprintf(
-                'Site Add-on Watchdog webhook request to %s failed: %s',
-                $url,
-                $response->get_error_message()
+                /* translators: 1: redacted webhook host, 2: error message. */
+                __('Webhook request to %1$s failed: %2$s', 'site-add-on-watchdog'),
+                $this->redactWebhookUrl($url),
+                $this->sanitizeErrorText($response->get_error_message())
             );
 
             $this->logWebhookFailure($message);
@@ -201,15 +246,16 @@ class Notifier
 
         $statusCode = wp_remote_retrieve_response_code($response);
         if ($statusCode < 200 || $statusCode >= 300) {
-            $bodyMessage = trim((string) wp_remote_retrieve_body($response));
+            $bodyMessage = $this->sanitizeErrorText((string) wp_remote_retrieve_body($response));
             $message     = sprintf(
-                'Site Add-on Watchdog webhook request to %s failed with status %d',
-                $url,
+                /* translators: 1: redacted webhook host, 2: HTTP status code. */
+                __('Webhook request to %1$s failed with status %2$d', 'site-add-on-watchdog'),
+                $this->redactWebhookUrl($url),
                 $statusCode
             );
 
             if ($bodyMessage !== '') {
-                $message .= sprintf(': %s', $bodyMessage);
+                $message .= sprintf(': %s', $this->truncateText($bodyMessage, 300));
             }
 
             $this->logWebhookFailure($message);
@@ -282,6 +328,27 @@ class Notifier
         if (function_exists('wp_debug_log')) {
             wp_debug_log($message);
         }
+    }
+
+    private function redactWebhookUrl(string $url): string
+    {
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+        $host   = parse_url($url, PHP_URL_HOST);
+        $port   = parse_url($url, PHP_URL_PORT);
+
+        if (! is_string($scheme) || ! is_string($host) || $scheme === '' || $host === '') {
+            return __('configured endpoint', 'site-add-on-watchdog');
+        }
+
+        return strtolower($scheme) . '://' . strtolower($host) . (is_int($port) ? ':' . $port : '');
+    }
+
+    private function sanitizeErrorText(string $message): string
+    {
+        $message = trim(strip_tags($message));
+        $message = preg_replace('/[\r\n\t ]+/', ' ', $message) ?? '';
+
+        return $this->truncateText($message, 300);
     }
 
     /**
@@ -368,7 +435,8 @@ class Notifier
             $blocks[] = ['type' => 'divider'];
         }
 
-        foreach ($risks as $risk) {
+        $displayRisks = array_slice($risks, 0, 35);
+        foreach ($displayRisks as $risk) {
             $blocks[] = [
                 'type' => 'section',
                 'text' => [
@@ -418,8 +486,7 @@ class Notifier
         ];
 
         return [
-            'username'    => 'Site Add-on Watchdog',
-            'text'        => $plainTextReport,
+            'text'        => $this->truncateText($plainTextReport, 3000),
             'blocks'      => $blocks,
             'attachments' => [
                 [
@@ -498,14 +565,15 @@ class Notifier
     {
         return [
             'username' => 'Site Add-on Watchdog',
-            'content'  => $plainTextReport,
+            'content'  => $this->truncateText($plainTextReport, 2000),
+            'allowed_mentions' => ['parse' => []],
         ];
     }
 
     /**
      * @param Risk[] $risks
      */
-    private function formatTeamsMessage(array $risks): array
+    private function formatTeamsMessage(array $risks, string $plainTextReport): array
     {
         $hasRisks   = ! empty($risks);
         $adminUrl   = admin_url('admin.php?page=site-add-on-watchdog');
@@ -517,7 +585,7 @@ class Notifier
         );
         $noRiskText = __('Everything looks good after the latest scan.', 'site-add-on-watchdog');
 
-        foreach ($risks as $risk) {
+        foreach (array_slice($risks, 0, 20) as $risk) {
             $riskBlocks[] = [
                 'activityTitle' => $risk->pluginName,
                 'facts'         => $this->formatTeamsRiskFacts($risk),
@@ -542,6 +610,7 @@ class Notifier
         return [
             '@type'    => 'MessageCard',
             '@context' => 'https://schema.org/extensions',
+            'text'     => $this->truncateText($plainTextReport, 4000),
             'summary'  => __('Site Add-on Watchdog Risk Alert', 'site-add-on-watchdog'),
             'themeColor' => '2271B1',
             'title'      => __('Site Add-on Watchdog Risk Alert', 'site-add-on-watchdog'),
@@ -567,6 +636,27 @@ class Notifier
                         ],
                     ],
                 ],
+            ],
+        ];
+    }
+
+    /**
+     * @param Risk[] $risks
+     */
+    private function formatCustomWebhookMessage(array $risks, string $plainTextReport): array
+    {
+        return [
+            'message' => $plainTextReport,
+            'risks'   => array_map(static fn (Risk $risk): array => $risk->toArray(), $risks),
+            'links'   => [
+                'dashboard' => admin_url('admin.php?page=site-add-on-watchdog'),
+                'updates'   => admin_url('update-core.php'),
+            ],
+            'meta'    => [
+                'count'     => count($risks),
+                'generated' => time(),
+                'source'    => 'Site Add-on Watchdog',
+                'version'   => Version::NUMBER,
             ],
         ];
     }
@@ -825,7 +915,10 @@ class Notifier
      */
     private function parseRecipients(string $recipients): array
     {
-        return array_filter(array_map('trim', explode(',', $recipients)));
+        return array_values(array_filter(array_map(
+            'trim',
+            preg_split('/[,;\s]+/', $recipients) ?: []
+        )));
     }
 
     /**
@@ -888,5 +981,34 @@ class Notifier
         }
 
         return $unique;
+    }
+
+    private function truncateText(string $text, int $limit): string
+    {
+        if ($limit < 2) {
+            return '';
+        }
+
+        $length = function_exists('mb_strlen') ? mb_strlen($text) : strlen($text);
+        if ($length <= $limit) {
+            return $text;
+        }
+
+        $truncated = function_exists('mb_substr')
+            ? mb_substr($text, 0, $limit - 1)
+            : substr($text, 0, $limit - 1);
+
+        return rtrim($truncated) . '…';
+    }
+
+    /**
+     * @param array<string, mixed> $notifications
+     * @return array<string, mixed>
+     */
+    private function channelSettings(array $notifications, string $channel): array
+    {
+        $settings = $notifications[$channel] ?? [];
+
+        return is_array($settings) ? $settings : [];
     }
 }

@@ -156,6 +156,20 @@ class AdminPage
         if ($watchdogNoticeNonceValid && is_string($watchdogFailedNotificationParam)) {
             $watchdogFailedNotificationStatus = sanitize_key($watchdogFailedNotificationParam);
         }
+        $watchdogChannelTest = '';
+        $watchdogChannelTestStatus = '';
+        $watchdogChannelTestParam = filter_input(INPUT_GET, 'channel_test', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        $watchdogChannelTestStatusParam = filter_input(
+            INPUT_GET,
+            'channel_test_status',
+            FILTER_SANITIZE_FULL_SPECIAL_CHARS
+        );
+        if ($watchdogNoticeNonceValid && is_string($watchdogChannelTestParam)) {
+            $watchdogChannelTest = sanitize_key($watchdogChannelTestParam);
+        }
+        if ($watchdogNoticeNonceValid && is_string($watchdogChannelTestStatusParam)) {
+            $watchdogChannelTestStatus = sanitize_key($watchdogChannelTestStatusParam);
+        }
 
         require __DIR__ . '/../templates/admin-page.php';
     }
@@ -186,17 +200,13 @@ class AdminPage
 
         $payload = $this->sanitizeSettingsInput($payload);
 
+        $messages     = [];
         $rawRetention = $payload['history']['retention'] ?? null;
         if (is_numeric($rawRetention) && (int) $rawRetention > 15) {
             $payload['history']['retention'] = '15';
-            $message = __(
+            $messages[] = __(
                 'History retention cannot exceed 15 scans. The value has been limited to 15.',
                 'site-add-on-watchdog'
-            );
-            set_transient(
-                self::PREFIX . '_settings_error',
-                $message,
-                30
             );
         }
 
@@ -204,10 +214,28 @@ class AdminPage
             $payload['notifications'] = [];
         }
 
-        $this->settingsRepository->save($payload);
+        $validationErrors = $this->settingsRepository->save($payload);
+        $messages = array_merge($messages, array_values($validationErrors));
         $this->plugin->schedule();
 
-        $this->redirectWithNotice(['updated' => 'true']);
+        if ($messages !== []) {
+            set_transient(
+                self::PREFIX . '_settings_error',
+                implode(' ', $messages),
+                30
+            );
+        }
+
+        $redirectArgs = ['updated' => 'true'];
+        $testChannel = sanitize_key(wp_unslash($_POST['test_channel'] ?? ''));
+        if ($testChannel !== '') {
+            $redirectArgs['channel_test'] = $testChannel;
+            $redirectArgs['channel_test_status'] = isset($validationErrors[$testChannel])
+                ? 'invalid_settings'
+                : $this->notifier->testChannel($testChannel);
+        }
+
+        $this->redirectWithNotice($redirectArgs);
         exit;
     }
 

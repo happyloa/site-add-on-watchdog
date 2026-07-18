@@ -137,7 +137,7 @@ class NotifierTest extends TestCase
                 return $headers === ['Content-Type: text/html; charset=UTF-8'];
             });
 
-        expect('wp_remote_post')
+        expect('wp_safe_remote_post')
             ->once()
             ->withArgs(function ($url, $args) {
                 self::assertSame('https://example.com/hook', $url);
@@ -378,7 +378,7 @@ class NotifierTest extends TestCase
         when('wp_remote_retrieve_response_code')->alias(static fn ($response) => $response['response']['code'] ?? 0);
         when('wp_remote_retrieve_body')->alias(static fn () => '');
 
-        expect('wp_remote_post')
+        expect('wp_safe_remote_post')
             ->once()
             ->withArgs(function ($url, $args) {
                 self::assertSame('https://example.com/hook', $url);
@@ -463,13 +463,13 @@ class NotifierTest extends TestCase
 
         when('is_wp_error')->alias(static fn ($value) => $value === $error);
 
-        expect('wp_remote_post')
+        expect('wp_safe_remote_post')
             ->once()
             ->andReturn($error);
 
         expect('set_transient')
             ->once()
-            ->with('siteadwa_webhook_error', 'Site Add-on Watchdog webhook request to https://example.com/hook failed: Something went wrong', 86400);
+            ->with('siteadwa_webhook_error', 'Webhook request to https://example.com failed: Something went wrong', 86400);
 
         expect('delete_transient')->never();
 
@@ -523,14 +523,14 @@ class NotifierTest extends TestCase
         when('wp_remote_retrieve_response_code')->alias(static fn () => 500);
         when('wp_remote_retrieve_body')->alias(static fn () => 'Server exploded');
 
-        expect('wp_remote_post')
+        expect('wp_safe_remote_post')
             ->once()
             ->andReturn([
                 'response' => ['code' => 500],
                 'body'     => 'Server exploded',
             ]);
 
-        $message = 'Site Add-on Watchdog webhook request to https://example.com/hook failed with status 500: Server exploded';
+        $message = 'Webhook request to https://example.com failed with status 500: Server exploded';
 
         expect('set_transient')
             ->once()
@@ -587,14 +587,14 @@ class NotifierTest extends TestCase
         when('wp_remote_retrieve_response_code')->alias(static fn ($response) => $response['response']['code'] ?? 0);
         when('wp_remote_retrieve_body')->alias(static fn () => '');
 
-        expect('wp_remote_post')
+        expect('wp_safe_remote_post')
             ->once()
             ->withArgs(function ($url, $args) {
                 self::assertSame('https://hooks.slack.com/services/example', $url);
                 self::assertSame('application/json', $args['headers']['Content-Type']);
 
                 $payload = json_decode($args['body'], true, 512, JSON_THROW_ON_ERROR);
-                self::assertSame('Site Add-on Watchdog', $payload['username']);
+                self::assertArrayNotHasKey('username', $payload);
                 self::assertArrayHasKey('blocks', $payload);
                 self::assertGreaterThanOrEqual(2, count($payload['blocks']));
                 self::assertSame('Review updates', $payload['blocks'][count($payload['blocks']) - 1]['elements'][0]['text']['text']);
@@ -661,7 +661,7 @@ class NotifierTest extends TestCase
         when('wp_remote_retrieve_response_code')->alias(static fn ($response) => $response['response']['code'] ?? 0);
         when('wp_remote_retrieve_body')->alias(static fn () => '');
 
-        expect('wp_remote_post')
+        expect('wp_safe_remote_post')
             ->once()
             ->withArgs(function ($url, $args) {
                 self::assertSame('https://example.com/teams', $url);
@@ -670,6 +670,7 @@ class NotifierTest extends TestCase
                 $payload = json_decode($args['body'], true, 512, JSON_THROW_ON_ERROR);
                 self::assertSame('MessageCard', $payload['@type']);
                 self::assertSame('Site Add-on Watchdog Risk Alert', $payload['title']);
+                self::assertArrayHasKey('text', $payload);
                 self::assertArrayHasKey('sections', $payload);
                 self::assertNotEmpty($payload['sections'][0]['text']);
 
@@ -690,6 +691,48 @@ class NotifierTest extends TestCase
         $notifier->notify([
             new Risk('plugin-slug', 'Plugin Name', '1.0.0', '2.0.0', ['Example reason']),
         ]);
+    }
+
+    public function testSingleDisabledChannelCanBeTestedWithoutDispatchingOthers(): void
+    {
+        $repository = $this->createMock(SettingsRepository::class);
+        $repository->method('get')->willReturn([
+            'notifications' => [
+                'email' => [
+                    'enabled' => false,
+                    'recipients' => 'test@example.com',
+                ],
+                'discord' => [
+                    'enabled' => true,
+                    'webhook' => 'https://discord.com/api/webhooks/unused',
+                ],
+            ],
+        ]);
+
+        when('get_users')->justReturn([]);
+        when('admin_url')->alias(static fn ($path = '') => 'https://example.com/wp-admin/' . ltrim($path, '/'));
+        when('esc_url')->alias(static fn ($url) => $url);
+        when('esc_html')->alias(static fn ($text) => $text);
+        when('esc_attr')->alias(static fn ($text) => $text);
+        when('__')->alias(static fn ($text) => $text);
+        when('esc_html__')->alias(static fn ($text) => $text);
+        when('sanitize_email')->alias(static fn ($email) => strtolower(trim((string) $email)));
+        when('sanitize_key')->alias(static fn ($key) => strtolower((string) $key));
+        when('is_email')->alias(static fn ($email) => $email !== '' && str_contains($email, '@'));
+
+        expect('wp_mail')
+            ->once()
+            ->withArgs(static fn ($recipients) => $recipients === ['test@example.com'])
+            ->andReturn(true);
+        expect('wp_safe_remote_post')->never();
+
+        $queue = $this->createMock(NotificationQueue::class);
+        $queue->expects(self::never())->method('enqueue');
+        $queue->expects(self::never())->method('recordFailure');
+
+        $notifier = new Notifier($repository, $queue);
+
+        self::assertSame('sent', $notifier->testChannel('email'));
     }
 
     private function makeNotifier(SettingsRepository $repository): Notifier

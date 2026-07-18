@@ -6,6 +6,55 @@ use Watchdog\Repository\SettingsRepository;
 
 class SettingsRepositoryTest extends TestCase
 {
+    public function testInvalidEnabledWebhookIsDisabledWhenSaved(): void
+    {
+        $stored = [
+            'notifications' => [
+                'frequency' => 'daily',
+                'cron_secret' => 'existing-secret',
+                'email' => ['enabled' => false, 'recipients' => ''],
+                'discord' => ['enabled' => false, 'webhook' => ''],
+                'slack' => ['enabled' => false, 'webhook' => ''],
+                'teams' => ['enabled' => false, 'webhook' => ''],
+                'webhook' => ['enabled' => false, 'url' => '', 'secret' => ''],
+            ],
+            'history' => ['retention' => RiskRepository::DEFAULT_HISTORY_RETENTION],
+        ];
+
+        Functions\when('get_option')->alias(static fn ($option, $default = false) => $option === 'siteadwa_settings'
+            ? $stored
+            : $default);
+        Functions\when('sanitize_text_field')->alias(static fn ($value) => (string) $value);
+        Functions\when('esc_url_raw')->alias(static fn ($value) => (string) $value);
+        Functions\when('__')->alias(static fn ($message) => $message);
+        Functions\when('get_users')->justReturn([]);
+
+        $updated = null;
+        Functions\when('update_option')->alias(static function ($option, $value) use (&$updated) {
+            if ($option === 'siteadwa_settings') {
+                $updated = $value;
+            }
+
+            return true;
+        });
+
+        $repository = new SettingsRepository();
+        $errors = $repository->save([
+            'notifications' => [
+                'frequency' => 'daily',
+                'discord' => [
+                    'enabled' => true,
+                    'webhook' => 'http://example.com/insecure',
+                ],
+            ],
+        ]);
+
+        self::assertArrayHasKey('discord', $errors);
+        self::assertIsArray($updated);
+        self::assertFalse($updated['notifications']['discord']['enabled']);
+        self::assertSame('http://example.com/insecure', $updated['notifications']['discord']['webhook']);
+    }
+
     public function testPrefillsAdministratorsWhenOptionIsMissing(): void
     {
         Functions\when('get_option')->alias(static function ($option, $default = false) {

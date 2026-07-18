@@ -4,6 +4,7 @@ namespace Watchdog\Repository;
 
 use Watchdog\TestingMode;
 use Watchdog\Version;
+use Watchdog\Services\NotificationValidator;
 
 class SettingsRepository
 {
@@ -105,7 +106,10 @@ class SettingsRepository
         return $settings;
     }
 
-    public function save(array $settings): void
+    /**
+     * @return array<string, string> Validation errors keyed by notification channel.
+     */
+    public function save(array $settings): array
     {
         $current           = $this->get();
         $notifications     = $settings['notifications'] ?? [];
@@ -205,9 +209,18 @@ class SettingsRepository
                 ?? $this->generateSecret();
         }
 
+        $validationErrors = (new NotificationValidator())->validate($filtered['notifications']);
+        foreach (array_keys($validationErrors) as $invalidChannel) {
+            if (isset($filtered['notifications'][$invalidChannel]['enabled'])) {
+                $filtered['notifications'][$invalidChannel]['enabled'] = false;
+            }
+        }
+
         if ($this->canPersist()) {
             update_option(self::OPTION, $filtered, false);
         }
+
+        return $validationErrors;
     }
 
     public function saveNotificationHash(string $hash): void

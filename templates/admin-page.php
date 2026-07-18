@@ -17,6 +17,8 @@
 /** @var string $watchdogNotificationResult */
 /** @var string $watchdogFailedNotificationStatus */
 /** @var bool $watchdogCronSecretPersisted */
+/** @var string $watchdogChannelTest */
+/** @var string $watchdogChannelTestStatus */
 
 use Watchdog\Models\Risk;
 use Watchdog\TestingMode;
@@ -108,6 +110,61 @@ $watchdogActionPrefix = $watchdogActionPrefix ?? \Watchdog\Version::PREFIX;
             <div class="notice notice-success is-dismissible"><p><?php esc_html_e('Queued the captured notification payload for resend.', 'site-add-on-watchdog'); ?></p></div>
         <?php elseif ($watchdogFailedNotificationStatus === 'missing') : ?>
             <div class="notice notice-error is-dismissible"><p><?php esc_html_e('No failed notification payload was available to resend.', 'site-add-on-watchdog'); ?></p></div>
+        <?php endif; ?>
+    <?php endif; ?>
+
+    <?php if ($watchdogChannelTest !== '' && $watchdogChannelTestStatus !== '') : ?>
+        <?php
+        $watchdogChannelTestLabels = [
+            'email' => __('Email', 'site-add-on-watchdog'),
+            'discord' => __('Discord', 'site-add-on-watchdog'),
+            'slack' => __('Slack', 'site-add-on-watchdog'),
+            'teams' => __('Microsoft Teams', 'site-add-on-watchdog'),
+            'webhook' => __('Custom webhook', 'site-add-on-watchdog'),
+        ];
+        $watchdogChannelTestLabel = $watchdogChannelTestLabels[$watchdogChannelTest]
+            ?? __('Notification channel', 'site-add-on-watchdog');
+        ?>
+        <?php if ($watchdogChannelTestStatus === 'sent') : ?>
+            <div class="notice notice-success is-dismissible"><p>
+                <?php
+                printf(
+                    /* translators: %s: notification channel name. */
+                    esc_html__('%s test notification sent successfully.', 'site-add-on-watchdog'),
+                    esc_html($watchdogChannelTestLabel)
+                );
+                ?>
+            </p></div>
+        <?php elseif ($watchdogChannelTestStatus === 'invalid_settings') : ?>
+            <div class="notice notice-error is-dismissible"><p>
+                <?php
+                printf(
+                    /* translators: %s: notification channel name. */
+                    esc_html__('%s could not be tested until its settings are corrected.', 'site-add-on-watchdog'),
+                    esc_html($watchdogChannelTestLabel)
+                );
+                ?>
+            </p></div>
+        <?php elseif ($watchdogChannelTestStatus === 'not_configured') : ?>
+            <div class="notice notice-warning is-dismissible"><p>
+                <?php
+                printf(
+                    /* translators: %s: notification channel name. */
+                    esc_html__('%s is not configured yet.', 'site-add-on-watchdog'),
+                    esc_html($watchdogChannelTestLabel)
+                );
+                ?>
+            </p></div>
+        <?php else : ?>
+            <div class="notice notice-error is-dismissible"><p>
+                <?php
+                printf(
+                    /* translators: %s: notification channel name. */
+                    esc_html__('%s test delivery failed. Review Delivery health for details.', 'site-add-on-watchdog'),
+                    esc_html($watchdogChannelTestLabel)
+                );
+                ?>
+            </p></div>
         <?php endif; ?>
     <?php endif; ?>
 
@@ -756,6 +813,7 @@ $watchdogActionPrefix = $watchdogActionPrefix ?? \Watchdog\Version::PREFIX;
                             <?php esc_html_e('Recipients (comma separated)', 'site-add-on-watchdog'); ?><br />
                             <input type="text" name="settings[notifications][email][recipients]" value="<?php echo esc_attr($watchdogSettings['notifications']['email']['recipients']); ?>" class="regular-text" />
                         </label>
+                        <p><button class="button" type="submit" name="test_channel" value="email"><?php esc_html_e('Save and test email', 'site-add-on-watchdog'); ?></button></p>
                     </div>
                 </td>
             </tr>
@@ -771,6 +829,7 @@ $watchdogActionPrefix = $watchdogActionPrefix ?? \Watchdog\Version::PREFIX;
                             <?php esc_html_e('Discord webhook URL', 'site-add-on-watchdog'); ?><br />
                             <input type="url" name="settings[notifications][discord][webhook]" value="<?php echo esc_attr($watchdogSettings['notifications']['discord']['webhook']); ?>" class="regular-text" />
                         </label>
+                        <p><button class="button" type="submit" name="test_channel" value="discord"><?php esc_html_e('Save and test Discord', 'site-add-on-watchdog'); ?></button></p>
                     </div>
                 </td>
             </tr>
@@ -786,6 +845,7 @@ $watchdogActionPrefix = $watchdogActionPrefix ?? \Watchdog\Version::PREFIX;
                             <?php esc_html_e('Slack webhook URL', 'site-add-on-watchdog'); ?><br />
                             <input type="url" name="settings[notifications][slack][webhook]" value="<?php echo esc_attr($watchdogSettings['notifications']['slack']['webhook']); ?>" class="regular-text" />
                         </label>
+                        <p><button class="button" type="submit" name="test_channel" value="slack"><?php esc_html_e('Save and test Slack', 'site-add-on-watchdog'); ?></button></p>
                     </div>
                 </td>
             </tr>
@@ -801,6 +861,8 @@ $watchdogActionPrefix = $watchdogActionPrefix ?? \Watchdog\Version::PREFIX;
                             <?php esc_html_e('Teams webhook URL', 'site-add-on-watchdog'); ?><br />
                             <input type="url" name="settings[notifications][teams][webhook]" value="<?php echo esc_attr($watchdogSettings['notifications']['teams']['webhook']); ?>" class="regular-text" />
                         </label>
+                        <p class="description"><?php esc_html_e('Supports Microsoft Teams Workflows and existing Incoming Webhook connectors.', 'site-add-on-watchdog'); ?></p>
+                        <p><button class="button" type="submit" name="test_channel" value="teams"><?php esc_html_e('Save and test Teams', 'site-add-on-watchdog'); ?></button></p>
                     </div>
                 </td>
             </tr>
@@ -823,6 +885,7 @@ $watchdogActionPrefix = $watchdogActionPrefix ?? \Watchdog\Version::PREFIX;
                             </label>
                             <span class="description"><?php esc_html_e('Used to sign webhook payloads with an HMAC signature.', 'site-add-on-watchdog'); ?></span>
                         </p>
+                        <p><button class="button" type="submit" name="test_channel" value="webhook"><?php esc_html_e('Save and test webhook', 'site-add-on-watchdog'); ?></button></p>
                     </div>
                 </td>
             </tr>
