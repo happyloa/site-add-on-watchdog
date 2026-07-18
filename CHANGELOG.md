@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add save-and-test actions for Email, Discord, Slack, Teams, and custom webhooks.
 - Redact webhook secrets from delivery errors and logs.
 - Preserve the previous saved report when a scan provider fails instead of replacing data or aborting the request.
+- Register recurring schedules on `init` to avoid early translation loading notices on WordPress 6.7 and newer.
+- Run continuous integration across PHP 8.1 through PHP 8.5.
 
 ## [1.7.5.1] - 2026-01-10
 

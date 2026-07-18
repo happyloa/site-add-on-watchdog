@@ -47,7 +47,9 @@ class Plugin
         add_action(self::CRON_HOOK, [$this, 'runScan']);
         add_action(self::CRON_HOOK, [$this, 'flushNotificationQueue'], 11);
         add_filter('cron_schedules', [$this, 'registerCronSchedules']);
-        add_action('plugins_loaded', [$this, 'schedule']);
+        // Cron schedule labels are translatable, so scheduling must wait until
+        // WordPress has initialized its just-in-time translation registry.
+        add_action('init', [$this, 'schedule']);
         add_action(self::QUEUE_CRON_HOOK, [$this, 'flushNotificationQueue']);
         add_action('admin_notices', [$this, 'renderCronDiagnostics']);
         add_action('rest_api_init', [$this, 'registerRestRoutes']);

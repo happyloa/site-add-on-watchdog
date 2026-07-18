@@ -5,20 +5,36 @@ on:
     branches: [ "main" ]
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  test:
+    name: PHP ${{ matrix.php-version }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: [ "8.1", "8.2", "8.3", "8.4", "8.5" ]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1'
+          php-version: ${{ matrix.php-version }}
           coverage: none
-          tools: composer
+          tools: composer:v2
+      - name: Validate Composer metadata
+        run: composer validate --strict
       - name: Install dependencies
-        run: composer install --prefer-dist --no-progress
+        run: composer install --prefer-dist --no-interaction --no-progress
       - name: Run PHPCS
+        if: matrix.php-version == '8.5'
         run: vendor/bin/phpcs
       - name: Run PHPUnit
         run: vendor/bin/phpunit

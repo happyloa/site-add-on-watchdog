@@ -111,6 +111,7 @@ The development repository is available on GitHub: https://github.com/happyloa/S
 * Update notification payloads and limits for current Slack, Discord, and Microsoft Teams webhook behavior.
 * Use safe WordPress HTTP requests, redact secrets from errors, and contain bootstrap or provider failures.
 * Cache WordPress.org lookups, preserve prior reports on scan failure, and defer the first remote scan after activation.
+* Register recurring schedules after WordPress initializes translations to prevent WordPress 6.7+ debug notices.
 * Declare compatibility with WordPress 7.0 and require PHP 8.1 or newer.
 
 = 1.7.5.1 =
