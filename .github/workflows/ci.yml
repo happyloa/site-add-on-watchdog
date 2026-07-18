@@ -53,8 +53,12 @@ jobs:
           include-experimental: false
           exclude-directories: |
             .github
+            artwork
+            scripts
             tests
+            wordpress-org-assets
           exclude-files: |
+            .distignore
             .gitattributes
             .gitignore
             composer.json

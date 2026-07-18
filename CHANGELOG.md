@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refresh the admin dashboard with overview cards, sticky section navigation, responsive settings, and guarded form submissions.
 - Extract risk sorting into a focused, independently tested service.
 
+### Added
+
+- Add a new Watchdog icon and responsive WordPress.org banner set with reproducible asset tooling.
+- Add a distribution ignore manifest so development files and directory artwork stay out of installable packages.
+
 ### Fixed
 
 - Contain bootstrap failures so an incomplete or corrupted installation cannot take down the rest of the site.

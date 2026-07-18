@@ -1,0 +1,15 @@
+/.git
+/.github
+/.gitattributes
+/.gitignore
+/.phpcs-cache
+/.phpunit.result.cache
+/artwork
+/scripts
+/tests
+/vendor
+/wordpress-org-assets
+/composer.json
+/composer.lock
+/phpcs.xml
+/phpunit.xml.dist
