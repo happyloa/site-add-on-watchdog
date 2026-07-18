@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Refresh plugin metadata and compatibility declarations for WordPress 7.0.
 - Move service construction and lifecycle hooks into a dedicated bootstrap.
+- Separate platform message formatting from notification transport and retry handling.
 - Schedule the first scan in the background instead of making activation depend on remote services.
 - Align Slack, Discord, and Microsoft Teams webhook payloads with their current platform limits and formats.
 - Use WordPress safe HTTP requests for outgoing webhooks.
