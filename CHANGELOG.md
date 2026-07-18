@@ -10,7 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Refresh plugin metadata and compatibility declarations for WordPress 7.0.
-- Begin a maintainability, notification reliability, and admin experience refresh.
+- Move service construction and lifecycle hooks into a dedicated bootstrap.
+- Schedule the first scan in the background instead of making activation depend on remote services.
+
+### Fixed
+
+- Contain bootstrap failures so an incomplete or corrupted installation cannot take down the rest of the site.
 
 ## [1.7.5.1] - 2026-01-10
 
