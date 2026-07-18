@@ -57,8 +57,10 @@ if (is_readable($watchdog_autoload)) {
 try {
     Watchdog\Bootstrap::create(__FILE__)->register();
 } catch (\Throwable $watchdogError) {
-    if (defined('WP_DEBUG') && WP_DEBUG) {
-        error_log('[Site Add-on Watchdog] Bootstrap failed: ' . $watchdogError->getMessage());
+    if (function_exists('do_action')) {
+        do_action('site_add_on_watchdog_diagnostic', 'bootstrap_failed', [
+            'exception' => get_class($watchdogError),
+        ]);
     }
 
     add_action('admin_notices', static function (): void {
@@ -68,8 +70,8 @@ try {
         }
 
         echo '<div class="notice notice-error"><p>'
-            . esc_html__('Site Add-on Watchdog could not start. The rest of the site is still available; '
-                    . 'check the PHP error log and reinstall the plugin files.', 'site-add-on-watchdog')
+            // phpcs:ignore Generic.Files.LineLength.TooLong -- Translation source must remain one literal string.
+            . esc_html__('Site Add-on Watchdog could not start. The rest of the site is still available; check the PHP error log and reinstall the plugin files.', 'site-add-on-watchdog')
             . '</p></div>';
     });
 }

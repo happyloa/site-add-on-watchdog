@@ -38,3 +38,26 @@ jobs:
         run: vendor/bin/phpcs
       - name: Run PHPUnit
         run: vendor/bin/phpunit
+
+  plugin-check:
+    name: WordPress Plugin Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run official WordPress checks
+        uses: wordpress/plugin-check-action@v1
+        with:
+          build-dir: .
+          strict: true
+          include-experimental: false
+          exclude-directories: |
+            .github
+            tests
+          exclude-files: |
+            .gitattributes
+            .gitignore
+            composer.json
+            composer.lock
+            phpcs.xml
+            phpunit.xml.dist

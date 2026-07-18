@@ -28,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Preserve the previous saved report when a scan provider fails instead of replacing data or aborting the request.
 - Register recurring schedules on `init` to avoid early translation loading notices on WordPress 6.7 and newer.
 - Run continuous integration across PHP 8.1 through PHP 8.5.
+- Replace direct debug logging with a structured `site_add_on_watchdog_diagnostic` action for safe extensibility.
+- Use WordPress URL and text sanitization helpers consistently.
+- Add the official WordPress Plugin Check to continuous integration.
 
 ## [1.7.5.1] - 2026-01-10
 

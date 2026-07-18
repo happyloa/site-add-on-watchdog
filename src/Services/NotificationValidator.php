@@ -68,7 +68,7 @@ final class NotificationValidator
             return false;
         }
 
-        $scheme = parse_url($url, PHP_URL_SCHEME);
+        $scheme = wp_parse_url($url, PHP_URL_SCHEME);
 
         return is_string($scheme) && strtolower($scheme) === 'https';
     }

@@ -544,6 +544,82 @@ class NotifierTest extends TestCase
         ]);
     }
 
+    public function testDiscordWebhookPayloadIsSentWhenEnabled(): void
+    {
+        $settings = [
+            'notifications' => [
+                'frequency' => 'daily',
+                'email'     => [
+                    'enabled'    => false,
+                    'recipients' => '',
+                ],
+                'discord'   => [
+                    'enabled' => true,
+                    'webhook' => 'https://discord.com/api/webhooks/example',
+                ],
+                'slack'     => [
+                    'enabled' => false,
+                    'webhook' => '',
+                ],
+                'teams'     => [
+                    'enabled' => false,
+                    'webhook' => '',
+                ],
+                'webhook'   => [
+                    'enabled' => false,
+                    'url'     => '',
+                ],
+                'wpscan_api_key' => '',
+            ],
+        ];
+
+        $repository = $this->createMock(SettingsRepository::class);
+        $repository->method('get')->willReturn($settings);
+
+        when('admin_url')->alias(static fn ($path = '') => 'https://example.com/wp-admin/' . ltrim($path, '/'));
+        when('esc_url')->alias(static fn ($url) => $url);
+        when('esc_html')->alias(static fn ($text) => $text);
+        when('esc_attr')->alias(static fn ($text) => $text);
+        when('__')->alias(static fn ($text) => $text);
+        when('esc_html__')->alias(static fn ($text) => $text);
+        when('wp_json_encode')->alias(static fn ($data) => json_encode($data, JSON_THROW_ON_ERROR));
+        when('is_wp_error')->alias(static fn () => false);
+        when('wp_remote_retrieve_response_code')->alias(
+            static fn ($response) => $response['response']['code'] ?? 0
+        );
+        when('wp_remote_retrieve_body')->alias(static fn () => '');
+
+        expect('wp_safe_remote_post')
+            ->once()
+            ->withArgs(function ($url, $args) {
+                self::assertSame('https://discord.com/api/webhooks/example', $url);
+                self::assertSame('application/json', $args['headers']['Content-Type']);
+
+                $payload = json_decode($args['body'], true, 512, JSON_THROW_ON_ERROR);
+                self::assertLessThanOrEqual(2000, strlen($payload['content']));
+                self::assertSame(['parse' => []], $payload['allowed_mentions']);
+                self::assertSame('Site Add-on Watchdog', $payload['username']);
+                self::assertStringContainsString('Plugin Name', $payload['content']);
+
+                return true;
+            })
+            ->andReturn([
+                'response' => ['code' => 204],
+                'body'     => '',
+            ]);
+
+        expect('delete_transient')
+            ->once()
+            ->with('siteadwa_webhook_error');
+
+        expect('set_transient')->never();
+
+        $notifier = $this->makeNotifier($repository);
+        $notifier->notify([
+            new Risk('plugin-slug', 'Plugin Name', '1.0.0', '2.0.0', ['Example reason']),
+        ]);
+    }
+
     public function testSlackWebhookPayloadIsSentWhenEnabled(): void
     {
         $settings = [

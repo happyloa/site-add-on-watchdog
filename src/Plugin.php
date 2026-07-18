@@ -155,9 +155,9 @@ class Plugin
                 $expiration
             );
 
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[Site Add-on Watchdog] Scan failed: ' . $error->getMessage());
-            }
+            do_action('site_add_on_watchdog_diagnostic', 'scan_failed', [
+                'exception' => get_class($error),
+            ]);
 
             return false;
         }
@@ -473,9 +473,9 @@ class Plugin
 
     private function logCronWarning(string $message): void
     {
-        if (function_exists('wp_debug_log')) {
-            wp_debug_log($message);
-        }
+        do_action('site_add_on_watchdog_diagnostic', 'cron_warning', [
+            'message' => $message,
+        ]);
     }
 
     private function cronIntervalForFrequency(string $frequency): int

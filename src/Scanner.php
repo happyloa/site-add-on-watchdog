@@ -248,15 +248,10 @@ class Scanner
 
     private function recordPluginScanError(string $slug, \Throwable $error): void
     {
-        if (! defined('WP_DEBUG') || ! WP_DEBUG) {
-            return;
-        }
-
-        error_log(sprintf(
-            '[Site Add-on Watchdog] Scan skipped for %s: %s',
-            sanitize_key($slug),
-            $error->getMessage()
-        ));
+        do_action('site_add_on_watchdog_diagnostic', 'plugin_scan_failed', [
+            'plugin'    => sanitize_key($slug),
+            'exception' => get_class($error),
+        ]);
     }
 
     private function changelogHighlightsSecurity(

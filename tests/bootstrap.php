@@ -15,6 +15,13 @@ abstract class TestCase extends PHPUnitTestCase
     {
         parent::setUp();
         Monkey\setUp();
+
+        Brain\Monkey\Functions\when('wp_parse_url')->alias(
+            static fn (string $url, int $component = -1) => parse_url($url, $component)
+        );
+        Brain\Monkey\Functions\when('wp_strip_all_tags')->alias(
+            static fn (string $text): string => preg_replace('/<[^>]*>/', '', $text) ?? ''
+        );
     }
 
     protected function tearDown(): void

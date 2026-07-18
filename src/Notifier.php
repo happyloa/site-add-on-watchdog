@@ -330,16 +330,16 @@ class Notifier
 
     private function logWebhookFailure(string $message): void
     {
-        if (function_exists('wp_debug_log')) {
-            wp_debug_log($message);
-        }
+        do_action('site_add_on_watchdog_diagnostic', 'notification_delivery_failed', [
+            'message' => $message,
+        ]);
     }
 
     private function redactWebhookUrl(string $url): string
     {
-        $scheme = parse_url($url, PHP_URL_SCHEME);
-        $host   = parse_url($url, PHP_URL_HOST);
-        $port   = parse_url($url, PHP_URL_PORT);
+        $scheme = wp_parse_url($url, PHP_URL_SCHEME);
+        $host   = wp_parse_url($url, PHP_URL_HOST);
+        $port   = wp_parse_url($url, PHP_URL_PORT);
 
         if (! is_string($scheme) || ! is_string($host) || $scheme === '' || $host === '') {
             return __('configured endpoint', 'site-add-on-watchdog');
@@ -350,7 +350,7 @@ class Notifier
 
     private function sanitizeErrorText(string $message): string
     {
-        $message = trim(strip_tags($message));
+        $message = trim(wp_strip_all_tags($message));
         $message = preg_replace('/[\r\n\t ]+/', ' ', $message) ?? '';
 
         return $this->truncateText($message, 300);
