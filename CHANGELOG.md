@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Align Slack, Discord, and Microsoft Teams webhook payloads with their current platform limits and formats.
 - Use WordPress safe HTTP requests for outgoing webhooks.
 - Cache WordPress.org plugin information and isolate failures to the affected plugin during scans.
+- Refresh the admin dashboard with overview cards, sticky section navigation, responsive settings, and guarded form submissions.
+- Extract risk sorting into a focused, independently tested service.
 
 ### Fixed
 

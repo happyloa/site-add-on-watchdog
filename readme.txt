@@ -28,16 +28,16 @@ The plugin runs on a schedule you control—choose daily, weekly, a twenty-minut
 
 === Admin tools ===
 
-* Dashboard page with the current risk list and manual scan button.
+* Focused dashboard with risk summaries, searchable history, delivery health, and manual actions.
 * Ignore list to suppress noisy plugins.
-* Notification settings for email, Discord, Slack, Microsoft Teams, or a generic webhook.
+* Validated notification settings with a save-and-test action for every channel.
 
 === Notifications ===
 
-* Email: send to one or more recipients (comma separated).
+* Email: send to one or more recipients separated by commas, semicolons, or spaces; site administrators are always included.
 * Discord: post to a channel via webhook.
 * Slack: connect via an incoming webhook to post alerts into any workspace channel.
-* Microsoft Teams: send adaptive card style notices through an incoming webhook connector.
+* Microsoft Teams: send notices through Teams Workflows or an existing Incoming Webhook connector.
 * Generic webhook: post JSON payload to any endpoint you control, with optional HMAC signatures. Failed deliveries are logged and highlighted on the Watchdog admin screen so you can reconfigure or resend manually.
 
 == Installation ==
@@ -59,7 +59,7 @@ Register for a free account at [wpscan.com](https://wpscan.com/) and copy the AP
 
 = How do I configure Slack or Microsoft Teams notifications? =
 
-Slack requires an Incoming Webhook URL that you can generate from your workspace's App Directory. Microsoft Teams uses an Incoming Webhook connector that supplies its own URL. Paste either URL into the Watchdog notification settings, choose which events to send, and Watchdog will post alerts directly into the selected channel.
+Slack requires an Incoming Webhook URL that you can generate from your workspace's App Directory. For Microsoft Teams, create a workflow that starts when a webhook request is received, or use an existing Incoming Webhook connector. Paste the resulting HTTPS URL into Watchdog, enable the channel, then use its save-and-test button to verify delivery.
 
 = Can I trigger scans manually? =
 
@@ -103,6 +103,15 @@ Recommended workflow: on CI/CD platforms, add a job step that boots your WordPre
 The development repository is available on GitHub: https://github.com/happyloa/Site-Add-on-Watchdog. Clone it locally to review the source or run the test suite.
 
 == Changelog ==
+
+= 1.8.0 =
+* Refresh the admin dashboard with overview cards, section navigation, responsive settings, and clearer delivery controls.
+* Isolate plugin bootstrapping, message formatting, risk sorting, and scan orchestration into focused services.
+* Validate and test Email, Discord, Slack, Teams, and generic webhook settings before delivery.
+* Update notification payloads and limits for current Slack, Discord, and Microsoft Teams webhook behavior.
+* Use safe WordPress HTTP requests, redact secrets from errors, and contain bootstrap or provider failures.
+* Cache WordPress.org lookups, preserve prior reports on scan failure, and defer the first remote scan after activation.
+* Declare compatibility with WordPress 7.0 and require PHP 8.1 or newer.
 
 = 1.7.5.1 =
 * Add proper PHPDoc type hints to the Risk model for better IDE support.

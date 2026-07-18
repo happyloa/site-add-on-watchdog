@@ -449,6 +449,32 @@
         updateOptionsVisibility();
     }
 
+    function initFormBusyState() {
+        document.querySelectorAll('.wp-watchdog-admin form').forEach((form) => {
+            form.addEventListener('submit', (event) => {
+                if (form.dataset.submitting === 'true') {
+                    event.preventDefault();
+                    return;
+                }
+
+                form.dataset.submitting = 'true';
+                form.classList.add('is-busy');
+
+                const submitter = event.submitter;
+                if (submitter) {
+                    submitter.setAttribute('aria-busy', 'true');
+                }
+
+                // Delay disabling buttons so the clicked channel-test value remains in the request.
+                window.setTimeout(() => {
+                    form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach((button) => {
+                        button.disabled = true;
+                    });
+                }, 0);
+            });
+        });
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('[data-wp-watchdog-table]').forEach((tableWrapper) => {
             initTable(tableWrapper);
@@ -456,5 +482,6 @@
 
         initNotificationToggles();
         initFrequencyDescription();
+        initFormBusyState();
     });
 })();
