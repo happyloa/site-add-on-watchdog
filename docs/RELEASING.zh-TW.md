@@ -1,6 +1,6 @@
 # Site Add-on Watchdog 1.8.0 發布手冊
 
-這份流程以 Windows、TortoiseSVN、桌面上的 `wp-svn` 工作副本，以及 GitHub repository `happyloa/Site-Add-on-Watchdog` 為準。
+這份流程以 Windows、TortoiseSVN、桌面上的 `wp-svn` 工作副本，以及 GitHub repository `happyloa/site-add-on-watchdog` 為準。
 
 > 重要：WordPress.org 的 `assets`、`trunk`、`tags` 是三個不同用途。圖示與 banner 只能放在 SVN 最上層的 `assets`；可執行外掛檔放在 `trunk` 與版本 tag。不要把 Git 的 `tests`、`vendor`、`artwork`、`scripts` 或 `wordpress-org-assets` 整包複製進 `trunk`。
 

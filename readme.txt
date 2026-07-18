@@ -100,7 +100,7 @@ Recommended workflow: on CI/CD platforms, add a job step that boots your WordPre
 
 == Development ==
 
-The development repository is available on GitHub: https://github.com/happyloa/Site-Add-on-Watchdog. Clone it locally to review the source or run the test suite.
+The development repository is available on GitHub: https://github.com/happyloa/site-add-on-watchdog. Clone it locally to review the source or run the test suite.
 
 == Changelog ==
 
@@ -115,4 +115,4 @@ The development repository is available on GitHub: https://github.com/happyloa/S
 * Preserve external Cron secrets across requests and upgrades so configured scheduler URLs remain valid.
 * Declare compatibility with WordPress 7.0 and require PHP 8.1 or newer.
 
-For earlier releases, see the full [GitHub changelog](https://github.com/happyloa/Site-Add-on-Watchdog/blob/main/CHANGELOG.md).
+For earlier releases, see the full [GitHub changelog](https://github.com/happyloa/site-add-on-watchdog/blob/main/CHANGELOG.md).
