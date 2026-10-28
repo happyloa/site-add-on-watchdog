@@ -87,10 +87,10 @@ jobs:
           cli_container=$(docker ps --filter label=com.docker.compose.service=cli --format '{{.ID}}' | head -n 1)
           test -n "$cli_container"
           network=$(docker inspect --format '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{end}}' "$cli_container")
-          docker run --detach --rm --name watchdog-mailpit-190 --network "$network" axllent/mailpit:latest
+          docker run --detach --rm --name watchdog-mailpit --network "$network" axllent/mailpit:latest
           docker cp source/tests/integration/email-smoke.php "$cli_container:/tmp/watchdog-email-smoke.php"
           wp-env run cli wp config set WP_ENVIRONMENT_TYPE local --type=constant
           wp-env run cli wp eval-file /tmp/watchdog-email-smoke.php
       - name: Stop SMTP test service
         if: always()
-        run: docker rm --force watchdog-mailpit-190 || true
+        run: docker rm --force watchdog-mailpit || true

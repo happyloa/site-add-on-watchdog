@@ -21,7 +21,7 @@ $assert = static function (bool $condition, string $message): void {
     }
 };
 $readMessages = static function (): array {
-    $response = file_get_contents('http://watchdog-mailpit-184:8025/api/v1/messages');
+    $response = file_get_contents('http://watchdog-mailpit:8025/api/v1/messages');
 
     return json_decode($response, true, 512, JSON_THROW_ON_ERROR);
 };
@@ -36,7 +36,7 @@ $smtpPort = 1025;
 $testSender = static fn (): string => 'watchdog@watchdog.test';
 $configureMail = static function ($mailer) use (&$smtpPort): void {
     $mailer->isSMTP();
-    $mailer->Host = 'watchdog-mailpit-184';
+    $mailer->Host = 'watchdog-mailpit';
     $mailer->Port = $smtpPort;
     $mailer->SMTPAuth = false;
     $mailer->SMTPAutoTLS = false;
@@ -91,15 +91,15 @@ try {
     $messages = $readMessages();
     $assert((int) $messages['total'] === $initialCount + 1, 'Mailpit did not capture the test email.');
     $message = json_decode(file_get_contents(
-        'http://watchdog-mailpit-184:8025/api/v1/message/' . $messages['messages'][0]['ID']
+        'http://watchdog-mailpit:8025/api/v1/message/' . $messages['messages'][0]['ID']
     ), true, 512, JSON_THROW_ON_ERROR);
     $addresses = array_column($message['To'], 'Address');
     $assert(in_array('tester@watchdog.test', $addresses, true), 'The configured recipient is missing.');
     foreach (get_users(['role' => 'administrator']) as $administrator) {
         $assert(in_array($administrator->user_email, $addresses, true), 'An administrator recipient is missing.');
     }
-    $assert($message['Subject'] === 'Site Add-on Watchdog Risk Alert', 'The email subject is incorrect.');
-    $assert(str_contains($message['HTML'], 'No plugin risks detected'), 'The test email body is incorrect.');
+    $assert($message['Subject'] === 'Site Add-on Watchdog Test', 'The email subject is incorrect.');
+    $assert(str_contains($message['HTML'], 'No scan was performed'), 'The test email body is incorrect.');
     $assert($webhookCalls === 0, 'Testing email also sent a webhook.');
     WP_CLI::log('PASS: real SMTP captured the HTML test email and all expected recipients.');
 
@@ -122,7 +122,7 @@ try {
     $messages = $readMessages();
     $assert((int) $messages['total'] === $initialCount + 2, 'Mailpit did not capture the retried alert.');
     $alert = json_decode(file_get_contents(
-        'http://watchdog-mailpit-184:8025/api/v1/message/' . $messages['messages'][0]['ID']
+        'http://watchdog-mailpit:8025/api/v1/message/' . $messages['messages'][0]['ID']
     ), true, 512, JSON_THROW_ON_ERROR);
     $assert(str_contains($alert['HTML'], 'Smoke Plugin') && str_contains($alert['HTML'], '<table'), 'The retried risk report is missing.');
     $assert($webhookCalls === 1, 'Retrying email duplicated the webhook.');
