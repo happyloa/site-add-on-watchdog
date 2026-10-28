@@ -392,6 +392,10 @@ class NotifierTest extends TestCase
 
                 $expectedSignature = 'sha256=' . hash_hmac('sha256', $args['body'], 'super-secret');
                 self::assertSame($expectedSignature, $args['headers']['X-Watchdog-Signature']);
+                $body = json_decode($args['body'], true, 512, JSON_THROW_ON_ERROR);
+                self::assertSame('risk_report', $body['meta']['event']);
+                self::assertSame(1, $body['meta']['schema_version']);
+                self::assertSame('12345678-1234-4123-8123-123456789abc', $body['meta']['event_id']);
 
                 return true;
             })
@@ -812,6 +816,54 @@ class NotifierTest extends TestCase
         $notifier = new Notifier($repository, $queue);
 
         self::assertSame('sent', $notifier->testChannel('email'));
+    }
+
+    public function testCustomWebhookTestIsIdentifiedAndSigned(): void
+    {
+        $repository = $this->createMock(SettingsRepository::class);
+        $repository->method('get')->willReturn([
+            'notifications' => [
+                'webhook' => ['enabled' => false, 'url' => 'https://example.com/hook', 'secret' => 'secret'],
+            ],
+        ]);
+        when('sanitize_key')->alias(static fn ($key) => $key);
+        when('admin_url')->alias(static fn ($path = '') => 'https://example.com/wp-admin/' . ltrim($path, '/'));
+        when('__')->alias(static fn ($text) => $text);
+        when('wp_json_encode')->alias(static fn ($body) => json_encode($body));
+        when('is_wp_error')->justReturn(false);
+        when('wp_remote_retrieve_response_code')->justReturn(204);
+        expect('delete_transient')->once();
+        expect('wp_safe_remote_post')->once()->withArgs(static function ($url, $args): bool {
+            $body = json_decode($args['body'], true, 512, JSON_THROW_ON_ERROR);
+            self::assertSame('test', $body['meta']['event']);
+            self::assertSame(0, $body['meta']['count']);
+            self::assertSame('sha256=' . hash_hmac('sha256', $args['body'], 'secret'), $args['headers']['X-Watchdog-Signature']);
+            return true;
+        })->andReturn(['response' => ['code' => 204]]);
+        $queue = $this->createMock(NotificationQueue::class);
+        self::assertSame('sent', (new Notifier($repository, $queue))->testChannel('webhook'));
+    }
+
+    public function testWebhookEncodingFailureDoesNotSendAnEmptyRequest(): void
+    {
+        $repository = $this->createMock(SettingsRepository::class);
+        $repository->method('get')->willReturn([
+            'notifications' => ['webhook' => ['url' => 'https://example.com/hook']],
+        ]);
+        when('sanitize_key')->alias(static fn ($key) => $key);
+        when('admin_url')->alias(static fn ($path = '') => 'https://example.com/wp-admin/' . ltrim($path, '/'));
+        when('__')->alias(static fn ($text) => $text);
+        when('wp_json_encode')->justReturn(false);
+        expect('wp_safe_remote_post')->never();
+        $queue = $this->createMock(NotificationQueue::class);
+        $queue->expects(self::once())->method('recordFailure')->with(
+            self::callback(static function (array $job): bool {
+                self::assertSame('Webhook payload could not be encoded as JSON.', $job['last_error']);
+                return true;
+            }),
+            self::isType('int')
+        );
+        self::assertSame('failed', (new Notifier($repository, $queue))->testChannel('webhook'));
     }
 
     /**

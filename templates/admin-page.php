@@ -148,7 +148,7 @@ $watchdogFrequencyLabel = $watchdogFrequencyLabels[$watchdogCurrentFrequency]
         <div class="notice notice-success is-dismissible"><p><?php esc_html_e('Settings saved.', 'site-add-on-watchdog'); ?></p></div>
     <?php endif; ?>
 
-    <?php if (! empty($watchdogNoticeFlags['scan'])) : ?>
+    <?php if (! empty($watchdogNoticeFlags['scan']) && empty($watchdogScanError)) : ?>
         <div class="notice notice-info is-dismissible"><p><?php esc_html_e('Manual scan completed.', 'site-add-on-watchdog'); ?></p></div>
     <?php endif; ?>
 
@@ -249,7 +249,7 @@ $watchdogFrequencyLabel = $watchdogFrequencyLabels[$watchdogCurrentFrequency]
                     </button>
                 </form>
             <?php else : ?>
-                <p class="wp-watchdog-muted"><?php esc_html_e('WP-Cron is running. Watchdog will use scheduled scans and backup triggers to deliver alerts.', 'site-add-on-watchdog'); ?></p>
+                <p class="wp-watchdog-muted"><?php esc_html_e('WP-Cron is enabled. Scheduled tasks depend on site traffic or a server cron job.', 'site-add-on-watchdog'); ?></p>
             <?php endif; ?>
             <div class="wp-watchdog-divider"></div>
             <p class="wp-watchdog-muted wp-watchdog-endpoint">
@@ -698,6 +698,7 @@ $watchdogFrequencyLabel = $watchdogFrequencyLabels[$watchdogCurrentFrequency]
                 <span class="dashicons dashicons-email-alt" aria-hidden="true"></span>
                 <?php esc_html_e('Settings and notifications', 'site-add-on-watchdog'); ?>
             </div>
+    <p class="description"><?php esc_html_e('Save and test buttons save all settings on this form, then send a test to the selected channel.', 'site-add-on-watchdog'); ?></p>
     <form class="wp-watchdog-settings-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
         <?php wp_nonce_field($watchdogActionPrefix . '_settings'); ?>
         <input type="hidden" name="action" value="<?php echo esc_attr($watchdogActionPrefix . '_save_settings'); ?>">
@@ -956,7 +957,7 @@ $watchdogFrequencyLabel = $watchdogFrequencyLabels[$watchdogCurrentFrequency]
                                 <?php esc_html_e('Webhook secret (optional)', 'site-add-on-watchdog'); ?><br />
                                 <input type="password" name="settings[notifications][webhook][secret]" value="<?php echo esc_attr($watchdogSettings['notifications']['webhook']['secret'] ?? ''); ?>" class="regular-text" autocomplete="new-password" />
                             </label>
-                            <span class="description"><?php esc_html_e('Used to sign webhook payloads with an HMAC signature.', 'site-add-on-watchdog'); ?></span>
+                            <span class="description"><?php esc_html_e('Signs the exact JSON body with HMAC-SHA256 in the X-Watchdog-Signature header. Test messages are marked in the payload.', 'site-add-on-watchdog'); ?></span>
                         </p>
                         <p><button class="button" type="submit" name="test_channel" value="webhook"><?php esc_html_e('Save and test webhook', 'site-add-on-watchdog'); ?></button></p>
                     </div>

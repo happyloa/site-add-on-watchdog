@@ -16,6 +16,10 @@ abstract class TestCase extends PHPUnitTestCase
         parent::setUp();
         Monkey\setUp();
 
+        Brain\Monkey\Functions\when('wp_generate_uuid4')->alias(
+            static fn (): string => '12345678-1234-4123-8123-123456789abc'
+        );
+
         Brain\Monkey\Functions\when('wp_parse_url')->alias(
             static fn (string $url, int $component = -1) => parse_url($url, $component)
         );

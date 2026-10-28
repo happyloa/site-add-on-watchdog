@@ -53,7 +53,24 @@ class MessageFormatterTest extends TestCase
         $payload = $formatter->customWebhook([], $formatter->plainText([]));
 
         self::assertSame(Version::NUMBER, $payload['meta']['version']);
+        self::assertSame(1, $payload['meta']['schema_version']);
+        self::assertSame('risk_report', $payload['meta']['event']);
+        self::assertSame('12345678-1234-4123-8123-123456789abc', $payload['meta']['event_id']);
         self::assertSame(0, $payload['meta']['count']);
         self::assertSame([], $payload['risks']);
+    }
+
+    public function testTestNotificationsDoNotClaimAScanWasPerformed(): void
+    {
+        $formatter = new MessageFormatter();
+        $text = $formatter->plainText([], true);
+        $payload = $formatter->customWebhook([], $text, true);
+
+        self::assertSame('test', $payload['meta']['event']);
+        self::assertStringContainsString('No scan was performed', $payload['message']);
+        self::assertStringContainsString('No scan was performed', $formatter->email([], true));
+        self::assertStringContainsString('No scan was performed', $formatter->slack([], $text, true)['blocks'][1]['text']['text']);
+        self::assertStringContainsString('No scan was performed', $formatter->teams([], $text, true)['sections'][0]['activityTitle']);
+        self::assertStringContainsString('No scan was performed', $formatter->discord($text)['content']);
     }
 }

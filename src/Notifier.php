@@ -83,7 +83,8 @@ class Notifier
         $notifications = isset($settings['notifications']) && is_array($settings['notifications'])
             ? $settings['notifications']
             : [];
-        $plainTextReport = $this->messageFormatter->plainText($risks);
+        $isTest          = $onlyChannel !== null;
+        $plainTextReport = $this->messageFormatter->plainText($risks, $isTest);
         $jobs            = [];
 
         $shouldBuild = static function (
@@ -117,8 +118,10 @@ class Notifier
                     'description' => __('Email alert', 'site-add-on-watchdog'),
                     'payload'     => [
                         'recipients' => $recipients,
-                        'subject'    => __('Site Add-on Watchdog Risk Alert', 'site-add-on-watchdog'),
-                        'body'       => $this->messageFormatter->email($risks),
+                        'subject'    => $isTest
+                            ? __('Site Add-on Watchdog Test', 'site-add-on-watchdog')
+                            : __('Site Add-on Watchdog Risk Alert', 'site-add-on-watchdog'),
+                        'body'       => $this->messageFormatter->email($risks, $isTest),
                         'headers'    => ['Content-Type: text/html; charset=UTF-8'],
                     ],
                 ];
@@ -134,17 +137,21 @@ class Notifier
             'slack' => [
                 'field' => 'webhook',
                 'description' => __('Slack webhook', 'site-add-on-watchdog'),
-                'formatter' => fn (): array => $this->messageFormatter->slack($risks, $plainTextReport),
+                'formatter' => fn (): array => $this->messageFormatter->slack($risks, $plainTextReport, $isTest),
             ],
             'teams' => [
                 'field' => 'webhook',
                 'description' => __('Microsoft Teams webhook', 'site-add-on-watchdog'),
-                'formatter' => fn (): array => $this->messageFormatter->teams($risks, $plainTextReport),
+                'formatter' => fn (): array => $this->messageFormatter->teams($risks, $plainTextReport, $isTest),
             ],
             'webhook' => [
                 'field' => 'url',
                 'description' => __('Custom webhook', 'site-add-on-watchdog'),
-                'formatter' => fn (): array => $this->messageFormatter->customWebhook($risks, $plainTextReport),
+                'formatter' => fn (): array => $this->messageFormatter->customWebhook(
+                    $risks,
+                    $plainTextReport,
+                    $isTest
+                ),
             ],
         ];
 
@@ -216,7 +223,7 @@ class Notifier
         $secret  = isset($payload['secret']) ? (string) $payload['secret'] : null;
         $encoded = wp_json_encode($body);
         if (! is_string($encoded)) {
-            $encoded = '';
+            return __('Webhook payload could not be encoded as JSON.', 'site-add-on-watchdog');
         }
 
         $headers = [

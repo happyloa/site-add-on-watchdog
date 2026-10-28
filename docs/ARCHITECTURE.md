@@ -1,6 +1,6 @@
 # Site Add-on Watchdog architecture
 
-Version 1.8.4 keeps the WordPress entry file deliberately small and puts each responsibility behind a focused class.
+Version 1.9.0 keeps the WordPress entry file deliberately small and puts each responsibility behind a focused class.
 
 ```text
 site-add-on-watchdog.php

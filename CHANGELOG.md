@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-10-28
+
+### Added
+
+- Add a schema version, event type, and event ID to custom webhook metadata. Retries retain the same event ID.
+- Document the custom webhook payload and HMAC verification.
+
+### Fixed
+
+- Identify channel test messages without claiming a scan was performed.
+- Avoid showing a successful manual scan notice when a scan fails.
+- Describe WP-Cron availability without claiming scheduled tasks are running.
+- Treat JSON encoding failures as delivery failures instead of sending an empty webhook body.
+
 ## [1.8.4] - 2026-10-09
 
 ### Fixed

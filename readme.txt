@@ -4,7 +4,7 @@ Tags: security, plugins, monitoring, notifications
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.8.4
+Stable tag: 1.9.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -48,6 +48,12 @@ Watchdog uses the following external services under the stated conditions:
 * Slack: connect via an incoming webhook to post alerts into any workspace channel.
 * Microsoft Teams: send notices through Teams Workflows or an existing Incoming Webhook connector.
 * Generic webhook: post JSON payload to any endpoint you control, with optional HMAC signatures. Failed deliveries are logged and highlighted on the Watchdog admin screen so you can reconfigure or resend manually.
+
+=== Custom webhook payload ===
+
+The JSON body contains `message`, `risks`, `links`, and `meta`. Existing fields are retained. The `meta.schema_version` integer is 1; `meta.event` is `test` for a channel test and `risk_report` for a report, including reports with zero risks. `meta.event_id` is a UUID generated for each payload and retained when that payload is retried or manually requeued. `meta.generated` is the creation time in Unix seconds; `meta.version` is the plugin version. Receivers may use the event ID to identify duplicate deliveries.
+
+When a secret is configured, `X-Watchdog-Signature` contains `sha256=` followed by the hex HMAC-SHA256 of the exact request body. Verify it with a constant-time comparison before processing. The signature does not itself prevent replay; receivers should check the timestamp and event ID according to their own retry policy. A successful HTTP response confirms acceptance by the endpoint, not downstream processing.
 
 == Installation ==
 
@@ -119,6 +125,12 @@ The development repository is available on GitHub: https://github.com/happyloa/s
 
 == Changelog ==
 
+= 1.9.0 =
+* Identify test notifications and add event metadata to custom webhooks.
+* Correct scan and WP-Cron status messages.
+* Document webhook signatures, retry identifiers, and payload fields.
+* Treat JSON encoding errors as delivery failures.
+
 = 1.8.4 =
 * Show mail and SMTP failure details in Delivery health while redacting sensitive URLs and common credential fields.
 * Keep webhook delivery and queue retries running when a mail plugin throws an exception.
@@ -159,6 +171,9 @@ The development repository is available on GitHub: https://github.com/happyloa/s
 For earlier releases, see the full [GitHub changelog](https://github.com/happyloa/site-add-on-watchdog/blob/main/CHANGELOG.md).
 
 == Upgrade Notice ==
+
+= 1.9.0 =
+Adds custom webhook event metadata and clarifies test and scan status messages.
 
 = 1.8.4 =
 Shows email failure details, keeps other channels running after mail errors, and clarifies how to check email delivery.

@@ -13,8 +13,12 @@ final class MessageFormatter
     /**
      * @param Risk[] $risks
      */
-    public function plainText(array $risks): string
+    public function plainText(array $risks, bool $isTest = false): string
     {
+        if ($isTest) {
+            return __('This is a test notification. No scan was performed.', 'site-add-on-watchdog');
+        }
+
         if ($risks === []) {
             return implode("\n", [
                 __('No plugin risks detected on your site at this time.', 'site-add-on-watchdog'),
@@ -63,7 +67,7 @@ final class MessageFormatter
      * @param Risk[] $risks
      * @return array<string, mixed>
      */
-    public function slack(array $risks, string $plainTextReport): array
+    public function slack(array $risks, string $plainTextReport, bool $isTest = false): array
     {
         $hasRisks  = $risks !== [];
         $adminUrl  = admin_url('admin.php?page=site-add-on-watchdog');
@@ -73,7 +77,9 @@ final class MessageFormatter
                 'type' => 'header',
                 'text' => [
                     'type'  => 'plain_text',
-                    'text'  => __('Site Add-on Watchdog Risk Alert', 'site-add-on-watchdog'),
+                    'text'  => $isTest
+                        ? __('Site Add-on Watchdog Test', 'site-add-on-watchdog')
+                        : __('Site Add-on Watchdog Risk Alert', 'site-add-on-watchdog'),
                     'emoji' => true,
                 ],
             ],
@@ -81,9 +87,9 @@ final class MessageFormatter
                 'type' => 'section',
                 'text' => [
                     'type' => 'mrkdwn',
-                    'text' => $hasRisks
+                    'text' => $isTest ? $plainTextReport : ($hasRisks
                         ? __('Potential plugin risks detected on your site:', 'site-add-on-watchdog')
-                        : __('No plugin risks detected on your site at this time.', 'site-add-on-watchdog'),
+                        : __('No plugin risks detected on your site at this time.', 'site-add-on-watchdog')),
                 ],
             ],
         ];
@@ -168,7 +174,7 @@ final class MessageFormatter
      * @param Risk[] $risks
      * @return array<string, mixed>
      */
-    public function teams(array $risks, string $plainTextReport): array
+    public function teams(array $risks, string $plainTextReport, bool $isTest = false): array
     {
         $hasRisks   = $risks !== [];
         $adminUrl   = admin_url('admin.php?page=site-add-on-watchdog');
@@ -190,11 +196,11 @@ final class MessageFormatter
 
         $sections = [
             [
-                'activityTitle' => $hasRisks
+                'activityTitle' => $isTest ? $plainTextReport : ($hasRisks
                     ? __('Potential plugin risks detected on your site:', 'site-add-on-watchdog')
-                    : __('No plugin risks detected on your site at this time.', 'site-add-on-watchdog'),
+                    : __('No plugin risks detected on your site at this time.', 'site-add-on-watchdog')),
                 'markdown' => true,
-                'text' => $hasRisks ? $introText : $noRiskText,
+                'text' => $isTest ? '' : ($hasRisks ? $introText : $noRiskText),
             ],
         ];
 
@@ -206,9 +212,13 @@ final class MessageFormatter
             '@type' => 'MessageCard',
             '@context' => 'https://schema.org/extensions',
             'text' => $this->truncate($plainTextReport, 4000),
-            'summary' => __('Site Add-on Watchdog Risk Alert', 'site-add-on-watchdog'),
+            'summary' => $isTest
+                ? __('Site Add-on Watchdog Test', 'site-add-on-watchdog')
+                : __('Site Add-on Watchdog Risk Alert', 'site-add-on-watchdog'),
             'themeColor' => '2271B1',
-            'title' => __('Site Add-on Watchdog Risk Alert', 'site-add-on-watchdog'),
+            'title' => $isTest
+                ? __('Site Add-on Watchdog Test', 'site-add-on-watchdog')
+                : __('Site Add-on Watchdog Risk Alert', 'site-add-on-watchdog'),
             'sections' => $sections,
             'potentialAction' => [
                 [
@@ -229,7 +239,7 @@ final class MessageFormatter
      * @param Risk[] $risks
      * @return array<string, mixed>
      */
-    public function customWebhook(array $risks, string $plainTextReport): array
+    public function customWebhook(array $risks, string $plainTextReport, bool $isTest = false): array
     {
         return [
             'message' => $plainTextReport,
@@ -239,6 +249,9 @@ final class MessageFormatter
                 'updates' => admin_url('update-core.php'),
             ],
             'meta' => [
+                'schema_version' => 1,
+                'event' => $isTest ? 'test' : 'risk_report',
+                'event_id' => wp_generate_uuid4(),
                 'count' => count($risks),
                 'generated' => time(),
                 'source' => 'Site Add-on Watchdog',
@@ -250,7 +263,7 @@ final class MessageFormatter
     /**
      * @param Risk[] $risks
      */
-    public function email(array $risks): string
+    public function email(array $risks, bool $isTest = false): string
     {
         $brandColor   = '#1d2327';
         $accentColor  = '#2271b1';
@@ -278,8 +291,12 @@ final class MessageFormatter
                 esc_attr($background),
                 esc_attr($brandColor),
                 esc_html__('Site Add-on Watchdog', 'site-add-on-watchdog'),
-                esc_html__('Latest scan completed — no risks detected.', 'site-add-on-watchdog'),
-                esc_html__('No plugin risks detected on your site at this time.', 'site-add-on-watchdog'),
+                $isTest
+                    ? esc_html__('Test notification', 'site-add-on-watchdog')
+                    : esc_html__('Latest scan completed — no risks detected.', 'site-add-on-watchdog'),
+                $isTest
+                    ? esc_html__('This is a test notification. No scan was performed.', 'site-add-on-watchdog')
+                    : esc_html__('No plugin risks detected on your site at this time.', 'site-add-on-watchdog'),
                 $pluginsUrl,
                 esc_attr($accentColor),
                 esc_html__('Review plugins', 'site-add-on-watchdog'),
