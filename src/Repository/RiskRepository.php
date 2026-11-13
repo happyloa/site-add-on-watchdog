@@ -7,6 +7,8 @@ use Watchdog\Version;
 
 class RiskRepository
 {
+    use MigratesLegacyOptions;
+
     private const PREFIX = Version::PREFIX;
     private const RISKS_OPTION = self::PREFIX . '_risks';
     private const IGNORE_OPTION = self::PREFIX . '_ignore';
@@ -28,6 +30,8 @@ class RiskRepository
             return [];
         }
 
+        // Ignoring a plugin takes effect at once instead of waiting for the next scan.
+        $ignored    = $this->ignored();
         $normalized = [];
 
         foreach ($stored as $entry) {
@@ -36,6 +40,10 @@ class RiskRepository
             }
 
             if (! isset($entry['plugin_slug'], $entry['plugin_name'], $entry['local_version'])) {
+                continue;
+            }
+
+            if (in_array((string) $entry['plugin_slug'], $ignored, true)) {
                 continue;
             }
 
@@ -238,23 +246,6 @@ class RiskRepository
         }
 
         return $details;
-    }
-
-    private function getOptionWithLegacy(string $option, string $legacyOption, mixed $default): mixed
-    {
-        $value = get_option($option, $default);
-        if ($value !== $default) {
-            return $value;
-        }
-
-        $legacyValue = get_option($legacyOption, $default);
-        if ($legacyValue !== $default) {
-            update_option($option, $legacyValue, false);
-
-            return $legacyValue;
-        }
-
-        return $value;
     }
 
     private function sanitizeRetention(?int $retention): int

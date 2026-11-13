@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-11-13
+
+### Added
+
+- Split the dashboard into Risks, History, Settings, and Delivery tabs. The overview now shows when the last scan ran and when the next one is due.
+- Check plugins that have no WordPress.org directory entry against WPScan when an API key is configured. The "not in the directory" answer is cached for six hours.
+- Delete the plugin's settings, saved risks, ignore list, scan history, notification queue, and scheduled events when the plugin is deleted from the Plugins screen.
+- Add copy buttons for the server cron endpoint, secret, and command.
+
+### Changed
+
+- Take the dashboard accent color from the WordPress admin, so it matches the admin color scheme on WordPress 6 and 7.
+- Declare `Tested up to` only in `readme.txt`, as the current Plugin Check requires.
+- Verify the packaged plugin against WordPress 7.1.4.
+- Hide a notification channel's fields while the channel is switched off. Saved values are kept.
+- Show the site-wide WP-Cron notice only after the scheduled scan is overdue. Sites that disable WP-Cron and run it from a system cron no longer see a permanent error.
+- Remove the "Retry notifications" button that appeared when WP-Cron was disabled. It did the same thing as "Send notifications now".
+
+### Fixed
+
+- Turn email alerts on by default, as the readme has always described. A new install saved the setting as off. Sites that never saved the Watchdog settings will start emailing risk alerts to their administrators after this update; sites that saved the settings keep their choice.
+- Stop writing the cron status option and running two option deletes on every page load. A front-end request now makes one plugin query instead of five.
+- Stop looking up administrator accounts before `plugins_loaded` on a new install, which logged a WordPress notice in debug mode.
+- Leave the recipient field empty when the site owner empties it. It was refilled with the administrator addresses, at the cost of a user query on every request. Administrators are still included when an alert is sent.
+- Remove a plugin from the risk table as soon as it is ignored. It used to stay listed until the next scan.
+- Show every column of the risk table on narrow screens. Only the plugin name was visible.
+- Send the report again when a REST cron scan is requested with `force`, even if nothing changed. The parameter was previously ignored for scans.
+- Stop repeating an earlier notice after a later action or a page reload.
+- Keep the "Download payload" button usable after the first download.
+- Stop recording a diagnostic failure on every scan for plugins that have no WordPress.org directory entry.
+
 ## [1.9.0] - 2026-10-28
 
 ### Added

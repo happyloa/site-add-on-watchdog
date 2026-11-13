@@ -9,13 +9,26 @@ class WPScanClient
     private const CACHE_TTL_HOURS = 12;
     private const ERROR_TTL_HOURS = 6;
 
-    public function __construct(private readonly ?string $apiKey)
+    /**
+     * @param string|\Closure|null $apiKey The key, or a callback that returns it. The callback
+     *                                     keeps the settings from being read while plugins load.
+     */
+    public function __construct(private string|\Closure|null $apiKey)
     {
     }
 
     public function isEnabled(): bool
     {
-        return ! empty($this->apiKey);
+        return $this->apiKey() !== '';
+    }
+
+    private function apiKey(): string
+    {
+        if ($this->apiKey instanceof \Closure) {
+            $this->apiKey = (string) ($this->apiKey)();
+        }
+
+        return (string) $this->apiKey;
     }
 
     public function fetchVulnerabilities(string $pluginSlug, string $pluginVersion = ''): array
@@ -44,7 +57,7 @@ class WPScanClient
             sprintf('https://wpscan.com/api/v3/plugins/%s', rawurlencode($pluginSlug)),
             [
                 'headers' => [
-                    'Authorization' => sprintf('Token token=%s', $this->apiKey),
+                    'Authorization' => sprintf('Token token=%s', $this->apiKey()),
                     'Accept'        => 'application/json',
                 ],
                 'timeout' => 15,

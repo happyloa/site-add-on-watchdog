@@ -25,6 +25,66 @@ class SettingsRepositoryTest extends TestCase
         self::assertSame('existing-cron-secret', $settings['notifications']['cron_secret']);
     }
 
+    /**
+     * @dataProvider emailDefaultProvider
+     */
+    public function testEmailAlertsDefaultToOnUntilTheSettingIsSaved(mixed $stored, bool $expected): void
+    {
+        Functions\when('get_option')->alias(static fn ($option, $default = false) => $option === 'siteadwa_settings'
+            ? $stored
+            : $default);
+        Functions\when('get_users')->justReturn([]);
+
+        $settings = (new SettingsRepository())->get();
+
+        self::assertSame($expected, (bool) $settings['notifications']['email']['enabled']);
+        self::assertFalse((bool) $settings['notifications']['discord']['enabled']);
+        self::assertSame('', $settings['notifications']['discord']['webhook']);
+    }
+
+    /**
+     * @return array<string, array{0: mixed, 1: bool}>
+     */
+    public function emailDefaultProvider(): array
+    {
+        return [
+            'fresh install' => [false, true],
+            'defaults persisted by an older version' => [
+                ['notifications' => ['frequency' => 'daily', 'email' => ['enabled' => null]]],
+                true,
+            ],
+            'switched off by the site owner' => [
+                ['notifications' => ['frequency' => 'daily', 'email' => ['enabled' => false]]],
+                false,
+            ],
+            'switched on by the site owner' => [
+                ['notifications' => ['frequency' => 'daily', 'email' => ['enabled' => true]]],
+                true,
+            ],
+        ];
+    }
+
+    public function testAnEmptiedRecipientFieldStaysEmptyWithoutAUserQuery(): void
+    {
+        $stored = [
+            'notifications' => [
+                'frequency'   => 'daily',
+                'cron_secret' => 'existing-cron-secret',
+                'email'       => ['enabled' => true, 'recipients' => ''],
+            ],
+        ];
+
+        Functions\when('get_option')->alias(static fn ($option, $default = false) => $option === 'siteadwa_settings'
+            ? $stored
+            : $default);
+        Functions\expect('get_users')->never();
+
+        $settings = (new SettingsRepository())->get();
+
+        self::assertSame('', $settings['notifications']['email']['recipients']);
+        self::assertTrue($settings['notifications']['email']['enabled']);
+    }
+
     public function testInvalidEnabledWebhookIsDisabledWhenSaved(): void
     {
         $stored = [

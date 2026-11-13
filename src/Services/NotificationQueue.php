@@ -2,10 +2,13 @@
 
 namespace Watchdog\Services;
 
+use Watchdog\Repository\MigratesLegacyOptions;
 use Watchdog\Version;
 
 class NotificationQueue
 {
+    use MigratesLegacyOptions;
+
     private const PREFIX = Version::PREFIX;
     private const QUEUE_OPTION  = self::PREFIX . '_notification_queue';
     private const FAILED_OPTION = self::PREFIX . '_failed_notification';
@@ -253,23 +256,6 @@ class NotificationQueue
     private function persistQueue(array $queue): void
     {
         update_option(self::QUEUE_OPTION, array_values($queue), false);
-    }
-
-    private function getOptionWithLegacy(string $option, string $legacy, mixed $default): mixed
-    {
-        $value = get_option($option, $default);
-        if ($value !== $default) {
-            return $value;
-        }
-
-        $legacyValue = get_option($legacy, $default);
-        if ($legacyValue !== $default) {
-            update_option($option, $legacyValue, false);
-
-            return $legacyValue;
-        }
-
-        return $value;
     }
 
     private function calculateDelay(int $attempts): int

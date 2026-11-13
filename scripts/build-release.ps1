@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '1.9.0'
+    [string] $Version = '1.10.0'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -43,6 +43,7 @@ $runtimePaths = @(
     'templates',
     'CHANGELOG.md',
     'readme.txt',
+    'uninstall.php',
     'site-add-on-watchdog.php'
 )
 

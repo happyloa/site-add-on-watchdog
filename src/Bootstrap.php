@@ -26,9 +26,11 @@ final class Bootstrap
     {
         $settingsRepository = new SettingsRepository();
         $riskRepository     = new RiskRepository();
-        $settings           = $settingsRepository->get();
+        // Read the key on first use. Loading the settings here would run before
+        // `plugins_loaded`, which is too early for the user query behind the
+        // default recipient list.
         $wpscanClient       = new WPScanClient(
-            (string) ($settings['notifications']['wpscan_api_key'] ?? '')
+            static fn (): string => (string) ($settingsRepository->get()['notifications']['wpscan_api_key'] ?? '')
         );
         $scanner            = new Scanner(
             $riskRepository,

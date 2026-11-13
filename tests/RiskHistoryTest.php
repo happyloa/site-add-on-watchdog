@@ -46,8 +46,11 @@ class RiskHistoryTest extends TestCase
         Functions\when('number_format_i18n')->alias(static fn ($value) => (string) $value);
         Functions\when('wp_date')->alias(static fn ($format, $timestamp) => gmdate($format, (int) $timestamp));
         Functions\when('get_option')->alias(static fn ($option, $default = null) => $default ?? '');
+        Functions\when('_n')->alias(
+            static fn (string $single, string $plural, int $number): string => $number === 1 ? $single : $plural
+        );
 
-        $historyRecords = [
+        $watchdogHistoryRecords = [
             [
                 'run_at'    => 200,
                 'risks'     => [
@@ -63,14 +66,14 @@ class RiskHistoryTest extends TestCase
                 'risk_count' => 1,
             ],
         ];
-        $historyDownloads = [
+        $watchdogHistoryDownloads = [
             200 => [
                 'json' => 'json-url',
                 'csv'  => 'csv-url',
             ],
         ];
-        $historyRetention = 5;
-        $historyDisplay   = 1;
+        $watchdogHistoryRetention = 5;
+        $watchdogHistoryDisplay   = 1;
 
         ob_start();
         require __DIR__ . '/../templates/history.php';
@@ -79,5 +82,6 @@ class RiskHistoryTest extends TestCase
         self::assertStringContainsString('json-url', $output);
         self::assertStringContainsString('csv-url', $output);
         self::assertStringContainsString(gmdate('Y-m-d H:i', 200), $output);
+        self::assertStringContainsString('1 risk', $output);
     }
 }

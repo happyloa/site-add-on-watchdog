@@ -2,24 +2,24 @@
 # This file is distributed under the GPLv2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Site Add-on Watchdog 1.9.0\n"
+"Project-Id-Version: Site Add-on Watchdog 1.10.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/site-add-on-watchdog\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-28T07:35:21+00:00\n"
+"POT-Creation-Date: 2026-11-13T04:50:43+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: site-add-on-watchdog\n"
 
 #. Plugin Name of the plugin
 #: site-add-on-watchdog.php
-#: src/AdminPage.php:60
+#: src/AdminPage.php:82
 #: src/Notifications/MessageFormatter.php:293
 #: src/Notifications/MessageFormatter.php:376
-#: templates/admin-page.php:57
+#: templates/admin-page.php:171
 msgid "Site Add-on Watchdog"
 msgstr ""
 
@@ -38,58 +38,58 @@ msgstr ""
 msgid "https://www.worksbyaaron.com/"
 msgstr ""
 
-#: site-add-on-watchdog.php:21
+#: site-add-on-watchdog.php:20
 msgid "Site Add-on Watchdog requires PHP 8.1 or higher. The plugin has been disabled."
 msgstr ""
 
-#: site-add-on-watchdog.php:74
+#: site-add-on-watchdog.php:73
 msgid "Site Add-on Watchdog could not start. The rest of the site is still available; check the PHP error log and reinstall the plugin files."
 msgstr ""
 
-#: src/AdminPage.php:61
+#: src/AdminPage.php:83
 msgid "Watchdog"
 msgstr ""
 
-#: src/AdminPage.php:72
+#: src/AdminPage.php:94
 msgid "You do not have permission to access this page."
 msgstr ""
 
-#: src/AdminPage.php:216
+#: src/AdminPage.php:248
 msgid "History retention cannot exceed 15 scans. The value has been limited to 15."
 msgstr ""
 
-#: src/AdminPage.php:323
+#: src/AdminPage.php:353
 msgid "No failed notification payload is available."
 msgstr ""
 
-#: src/AdminPage.php:342
+#: src/AdminPage.php:372
 msgid "Invalid history request."
 msgstr ""
 
-#: src/AdminPage.php:353
+#: src/AdminPage.php:383
 msgid "History entry not found."
 msgstr ""
 
-#: src/AdminPage.php:368
+#: src/AdminPage.php:398
 msgid "You do not have permission to perform this action."
 msgstr ""
 
 #. translators: 1: current page number, 2: total number of pages.
-#: src/AdminPage.php:408
+#: src/AdminPage.php:438
 #, php-format
 msgid "Page %1$d of %2$d"
 msgstr ""
 
-#: src/AdminPage.php:409
+#: src/AdminPage.php:439
 msgid "No risks match your search."
 msgstr ""
 
-#: src/AdminPage.php:493
-msgid "Unable to generate history export."
+#: src/AdminPage.php:440
+msgid "Copied"
 msgstr ""
 
 #: src/Bootstrap.php:97
-#: templates/admin-page.php:86
+#: templates/admin-page.php:161
 msgid "Settings"
 msgstr ""
 
@@ -140,7 +140,7 @@ msgstr ""
 #: src/Notifications/MessageFormatter.php:349
 #: src/Notifications/MessageFormatter.php:402
 #: src/Notifications/MessageFormatter.php:459
-#: templates/admin-page.php:568
+#: templates/admin-page.php:473
 msgid "N/A"
 msgstr ""
 
@@ -171,6 +171,7 @@ msgstr ""
 #: src/Notifications/MessageFormatter.php:131
 #: src/Notifications/MessageFormatter.php:226
 #: src/Notifications/MessageFormatter.php:385
+#: templates/admin-page.php:355
 msgid "Review updates"
 msgstr ""
 
@@ -222,7 +223,7 @@ msgid "Current Version"
 msgstr ""
 
 #: src/Notifications/MessageFormatter.php:348
-#: templates/admin-page.php:409
+#: templates/admin-page.php:375
 msgid "Directory Version"
 msgstr ""
 
@@ -241,21 +242,21 @@ msgstr ""
 
 #: src/Notifications/MessageFormatter.php:401
 #: src/Notifications/MessageFormatter.php:458
-#: templates/admin-page.php:505
+#: templates/admin-page.php:384
 msgid "Directory version"
 msgstr ""
 
 #. translators: %s: plugin version number.
 #: src/Notifications/MessageFormatter.php:425
 #: src/Notifications/MessageFormatter.php:483
-#: templates/admin-page.php:641
+#: templates/admin-page.php:499
 #, php-format
 msgid "Fixed in %s"
 msgstr ""
 
 #: src/Notifications/MessageFormatter.php:465
-#: templates/admin-page.php:410
-#: templates/admin-page.php:513
+#: templates/admin-page.php:376
+#: templates/admin-page.php:385
 msgid "Reasons"
 msgstr ""
 
@@ -280,7 +281,7 @@ msgid "Microsoft Teams webhook"
 msgstr ""
 
 #: src/Notifier.php:149
-#: templates/admin-page.php:180
+#: templates/admin-page.php:55
 msgid "Custom webhook"
 msgstr ""
 
@@ -324,86 +325,86 @@ msgstr ""
 msgid "configured endpoint"
 msgstr ""
 
-#: src/Plugin.php:151
+#: src/Plugin.php:154
 msgid "The scan could not be completed. No saved results were changed; please try again."
 msgstr ""
 
-#: src/Plugin.php:240
+#: src/Plugin.php:245
 msgid "Once Weekly"
 msgstr ""
 
-#: src/Plugin.php:247
-#: src/Plugin.php:254
+#: src/Plugin.php:252
+#: src/Plugin.php:259
 msgid "Every 5 Minutes (Watchdog queue)"
 msgstr ""
 
 #. translators: %d: interval minutes
-#: src/Plugin.php:263
+#: src/Plugin.php:268
 #, php-format
 msgid "Every %d Minutes (testing)"
 msgstr ""
 
-#: src/Plugin.php:352
-msgid "WP-Cron appears disabled. Set a system cron job to trigger wp-cron.php for Site Add-on Watchdog."
+#: src/Plugin.php:350
+msgid "The scheduled Site Add-on Watchdog scan is overdue and WP-Cron is disabled on this site. Make sure a system cron job calls wp-cron.php."
 msgstr ""
 
-#: src/Plugin.php:363
+#: src/Plugin.php:355
 msgid "Site Add-on Watchdog scans are overdue. Ensure system cron calls wp-cron.php regularly."
 msgstr ""
 
-#: src/Plugin.php:656
+#: src/Plugin.php:668
 msgid "Notifications processed."
 msgstr ""
 
-#: src/Plugin.php:667
+#: src/Plugin.php:679
 msgid "Scan triggered successfully."
 msgstr ""
 
-#: src/Plugin.php:710
+#: src/Plugin.php:693
 msgid "The cron endpoint only accepts POST requests."
 msgstr ""
 
-#: src/Plugin.php:719
+#: src/Plugin.php:702
 msgid "Cron secret is missing. Please resave your settings."
 msgstr ""
 
-#: src/Plugin.php:728
+#: src/Plugin.php:711
 msgid "Invalid cron secret."
 msgstr ""
 
-#: src/Plugin.php:736
+#: src/Plugin.php:719
 msgid "Force requests require header authentication."
 msgstr ""
 
-#: src/Scanner.php:89
+#: src/Scanner.php:90
 msgid "An update is available in the plugin directory."
 msgstr ""
 
-#: src/Scanner.php:100
+#: src/Scanner.php:101
 msgid "Local version is more than two minor releases behind the directory version."
 msgstr ""
 
-#: src/Scanner.php:115
+#: src/Scanner.php:116
 msgid "Changelog mentions security-related updates."
 msgstr ""
 
-#: src/Scanner.php:131
+#: src/Scanner.php:132
 msgid "Active vulnerabilities reported by WPScan."
 msgstr ""
 
-#: src/Scanner.php:190
+#: src/Scanner.php:191
 msgid "Severe"
 msgstr ""
 
-#: src/Scanner.php:197
+#: src/Scanner.php:198
 msgid "High"
 msgstr ""
 
-#: src/Scanner.php:204
+#: src/Scanner.php:205
 msgid "Medium"
 msgstr ""
 
-#: src/Scanner.php:210
+#: src/Scanner.php:211
 msgid "Low"
 msgstr ""
 
@@ -435,582 +436,675 @@ msgstr ""
 msgid "WPScan API is temporarily unavailable; queries are paused."
 msgstr ""
 
-#: templates/admin-page.php:38
-#: templates/admin-page.php:751
+#: templates/admin-page.php:51
+msgid "Email"
+msgstr ""
+
+#: templates/admin-page.php:52
+msgid "Discord"
+msgstr ""
+
+#: templates/admin-page.php:53
+msgid "Slack"
+msgstr ""
+
+#: templates/admin-page.php:54
+msgid "Microsoft Teams"
+msgstr ""
+
+#: templates/admin-page.php:65
+#: templates/admin-page.php:594
 msgid "Daily"
 msgstr ""
 
-#: templates/admin-page.php:39
-#: templates/admin-page.php:752
+#: templates/admin-page.php:66
+#: templates/admin-page.php:595
 msgid "Weekly"
 msgstr ""
 
-#: templates/admin-page.php:40
+#: templates/admin-page.php:67
 msgid "Testing"
 msgstr ""
 
-#: templates/admin-page.php:41
+#: templates/admin-page.php:68
+#: templates/admin-page.php:120
 msgid "Manual"
 msgstr ""
 
-#: templates/admin-page.php:51
-msgid "Plugin health and security"
+#: templates/admin-page.php:77
+msgid "No scan has run yet. Run a manual scan to create your first report."
 msgstr ""
 
-#: templates/admin-page.php:59
-msgid "Monitor plugin health, review scan history, and verify every alert channel from one focused dashboard."
-msgstr ""
-
-#: templates/admin-page.php:67
-msgid "Run manual scan"
-msgstr ""
-
-#: templates/admin-page.php:76
-msgid "Send notifications now"
-msgstr ""
-
-#: templates/admin-page.php:82
-msgid "Watchdog sections"
-msgstr ""
-
-#: templates/admin-page.php:83
-msgid "Risks"
-msgstr ""
-
-#: templates/admin-page.php:84
-msgid "History"
-msgstr ""
+#. translators: %s: number of plugins.
+#: templates/admin-page.php:81
+#, php-format
+msgid "%s plugin needs attention."
+msgid_plural "%s plugins need attention."
+msgstr[0] ""
+msgstr[1] ""
 
 #: templates/admin-page.php:85
-msgid "Delivery"
+msgid "No risks found in the latest scan."
 msgstr ""
 
-#: templates/admin-page.php:89
-msgid "Watchdog overview"
+#: templates/admin-page.php:91
+msgid "Not scanned yet"
 msgstr ""
 
-#: templates/admin-page.php:93
-msgid "Open risks"
+#: templates/admin-page.php:94
+msgid "All clear"
 msgstr ""
 
-#: templates/admin-page.php:98
-msgid "Active channels"
-msgstr ""
+#. translators: %s: number of vulnerabilities.
+#: templates/admin-page.php:99
+#, php-format
+msgid "%s known vulnerability"
+msgid_plural "%s known vulnerabilities"
+msgstr[0] ""
+msgstr[1] ""
 
-#: templates/admin-page.php:103
-msgid "Queued alerts"
+#: templates/admin-page.php:104
+msgid "Updates available"
 msgstr ""
 
 #: templates/admin-page.php:108
-msgid "Scan schedule"
+msgid "Never"
 msgstr ""
 
-#: templates/admin-page.php:126
+#: templates/admin-page.php:109
+msgid "Run a manual scan"
+msgstr ""
+
+#. translators: %s: human-readable time difference, for example "2 hours".
+#: templates/admin-page.php:113
+#, php-format
+msgid "%s ago"
+msgstr ""
+
+#: templates/admin-page.php:121
+msgid "Automatic scans are off"
+msgstr ""
+
+#: templates/admin-page.php:123
+msgid "Not scheduled"
+msgstr ""
+
+#: templates/admin-page.php:124
+msgid "Save the settings to reschedule"
+msgstr ""
+
+#. translators: %s: human-readable time difference, for example "2 hours".
+#: templates/admin-page.php:129
+#, php-format
+msgid "In %s"
+msgstr ""
+
+#: templates/admin-page.php:132
+msgid "Due now"
+msgstr ""
+
+#. translators: 1: scan frequency, 2: date and time.
+#: templates/admin-page.php:135
+#, php-format
+msgid "%1$s, %2$s"
+msgstr ""
+
+#: templates/admin-page.php:144
+msgid "Last delivery failed"
+msgstr ""
+
+#. translators: %s: number of queued alerts.
+#: templates/admin-page.php:148
+#, php-format
+msgid "%s alert queued"
+msgid_plural "%s alerts queued"
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/admin-page.php:153
+msgid "No channel enabled"
+msgstr ""
+
+#: templates/admin-page.php:155
+msgid "No failed deliveries"
+msgstr ""
+
+#: templates/admin-page.php:159
+msgid "Risks"
+msgstr ""
+
+#: templates/admin-page.php:160
+msgid "History"
+msgstr ""
+
+#: templates/admin-page.php:162
+msgid "Delivery"
+msgstr ""
+
+#: templates/admin-page.php:183
+msgid "Send notifications now"
+msgstr ""
+
+#: templates/admin-page.php:191
+msgid "Run manual scan"
+msgstr ""
+
+#: templates/admin-page.php:213
 msgid "Cron secret has not been initialized or could not be saved. Please try saving the settings again."
 msgstr ""
 
 #. translators: 1: WPScan response code, 2: message
-#: templates/admin-page.php:136
+#: templates/admin-page.php:223
 #, php-format
 msgid "WPScan error (%1$s): %2$s"
 msgstr ""
 
-#: templates/admin-page.php:148
+#: templates/admin-page.php:235
 msgid "Settings saved."
 msgstr ""
 
-#: templates/admin-page.php:152
+#: templates/admin-page.php:239
 msgid "Manual scan completed."
 msgstr ""
 
-#: templates/admin-page.php:157
+#: templates/admin-page.php:243
 msgid "Notifications were dispatched."
 msgstr ""
 
-#: templates/admin-page.php:159
+#: templates/admin-page.php:245
 msgid "Notifications skipped to avoid rapid re-sends. Please wait a moment and try again."
 msgstr ""
 
-#: templates/admin-page.php:161
-msgid "No notification changes detected since the last send."
-msgstr ""
-
-#: templates/admin-page.php:167
+#: templates/admin-page.php:249
 msgid "Queued the captured notification payload for resend."
 msgstr ""
 
-#: templates/admin-page.php:169
+#: templates/admin-page.php:251
 msgid "No failed notification payload was available to resend."
 msgstr ""
 
-#: templates/admin-page.php:176
-#: templates/admin-page.php:364
-msgid "Email"
-msgstr ""
-
-#: templates/admin-page.php:177
-#: templates/admin-page.php:367
-msgid "Discord"
-msgstr ""
-
-#: templates/admin-page.php:178
-#: templates/admin-page.php:365
-msgid "Slack"
-msgstr ""
-
-#: templates/admin-page.php:179
-#: templates/admin-page.php:366
-msgid "Microsoft Teams"
-msgstr ""
-
-#: templates/admin-page.php:183
+#: templates/admin-page.php:257
 msgid "Notification channel"
 msgstr ""
 
-#: templates/admin-page.php:189
+#: templates/admin-page.php:263
 msgid "WordPress accepted the test email for sending. This does not confirm inbox delivery. If it does not arrive, check spam and your site mail or SMTP configuration."
 msgstr ""
 
 #. translators: %s: notification channel name.
-#: templates/admin-page.php:193
+#: templates/admin-page.php:267
 #, php-format
 msgid "%s test notification sent successfully."
 msgstr ""
 
 #. translators: %s: notification channel name.
-#: templates/admin-page.php:204
+#: templates/admin-page.php:278
 #, php-format
 msgid "%s could not be tested until its settings are corrected."
 msgstr ""
 
 #. translators: %s: notification channel name.
-#: templates/admin-page.php:214
+#: templates/admin-page.php:288
 #, php-format
 msgid "%s is not configured yet."
 msgstr ""
 
 #. translators: %s: notification channel name.
-#: templates/admin-page.php:224
+#: templates/admin-page.php:298
 #, php-format
-msgid "%s test delivery failed. Review Delivery health for details."
+msgid "%s test delivery failed. Open the Delivery tab for details."
 msgstr ""
 
-#: templates/admin-page.php:236
-msgid "Delivery health"
+#: templates/admin-page.php:306
+msgid "Watchdog overview"
 msgstr ""
 
-#: templates/admin-page.php:240
-msgid "WP-Cron appears disabled. Use a real cron job or the server endpoint below to keep scans running."
+#: templates/admin-page.php:309
+msgid "Open risks"
 msgstr ""
 
-#: templates/admin-page.php:248
-msgid "Retry notifications"
-msgstr ""
-
-#: templates/admin-page.php:252
-msgid "WP-Cron is enabled. Scheduled tasks depend on site traffic or a server cron job."
-msgstr ""
-
-#: templates/admin-page.php:256
-msgid "Server cron endpoint:"
-msgstr ""
-
-#: templates/admin-page.php:261
-msgid "Generated Cron secret:"
-msgstr ""
-
-#: templates/admin-page.php:265
-msgid "Authenticated command:"
-msgstr ""
-
-#: templates/admin-page.php:268
-msgid "Use POST and keep the generated secret private. The header-authenticated request can trigger scans or notification retries even when wp-cron is disabled."
-msgstr ""
-
-#: templates/admin-page.php:272
-msgid "Queue status"
-msgstr ""
-
-#. translators: %d: number of queued jobs.
-#: templates/admin-page.php:280
-#, php-format
-msgid "Queued jobs: %d"
-msgstr ""
-
-#. translators: 1: scheduled time
-#: templates/admin-page.php:290
-#, php-format
-msgid "Next attempt: %1$s"
-msgstr ""
-
-#: templates/admin-page.php:296
-msgid "No pending notifications in the queue."
-msgstr ""
-
-#: templates/admin-page.php:301
-msgid "Captured notification payloads"
-msgstr ""
-
-#: templates/admin-page.php:308
-msgid "Unknown channel"
-msgstr ""
-
-#. translators: 1: human readable time, 2: channel name
 #: templates/admin-page.php:315
-#, php-format
-msgid "Last failure recorded %1$s via %2$s."
+msgid "Last scan"
 msgstr ""
 
-#: templates/admin-page.php:330
-msgid "Re-queue payload"
+#: templates/admin-page.php:321
+msgid "Next scan"
 msgstr ""
 
-#: templates/admin-page.php:338
-msgid "Download payload"
+#: templates/admin-page.php:327
+msgid "Active channels"
 msgstr ""
 
-#: templates/admin-page.php:343
-msgid "No failed notification payload has been captured yet."
+#: templates/admin-page.php:333
+msgid "Watchdog sections"
 msgstr ""
 
-#: templates/admin-page.php:353
-msgid "Scan History"
+#: templates/admin-page.php:341
+msgid "Needs attention"
 msgstr ""
 
-#: templates/admin-page.php:360
-msgid "Notification channels"
-msgstr ""
-
-#: templates/admin-page.php:368
-msgid "Custom Webhook"
-msgstr ""
-
-#: templates/admin-page.php:380
-msgid "On"
-msgstr ""
-
-#: templates/admin-page.php:380
-msgid "Off"
-msgstr ""
-
-#: templates/admin-page.php:386
-msgid "Keep channels enabled to receive instant alerts and download-ready reports."
-msgstr ""
-
-#: templates/admin-page.php:395
+#: templates/admin-page.php:351
 msgid "Potential Risks"
 msgstr ""
 
-#: templates/admin-page.php:399
-msgid "items flagged"
+#: templates/admin-page.php:352
+msgid "Plugins with a newer release, a security note in the latest changelog, or a known vulnerability."
 msgstr ""
 
-#: templates/admin-page.php:403
+#: templates/admin-page.php:363
+msgid "No scan results yet"
+msgstr ""
+
+#: templates/admin-page.php:364
+msgid "Run a manual scan to check your plugins now."
+msgstr ""
+
+#: templates/admin-page.php:366
 msgid "No risks detected."
 msgstr ""
 
-#: templates/admin-page.php:407
+#: templates/admin-page.php:367
+msgid "Nothing was flagged in the latest scan."
+msgstr ""
+
+#: templates/admin-page.php:373
 msgid "Plugin"
 msgstr ""
 
-#: templates/admin-page.php:408
+#: templates/admin-page.php:374
 msgid "Local Version"
 msgstr ""
 
-#: templates/admin-page.php:411
+#: templates/admin-page.php:377
 msgid "Actions"
 msgstr ""
 
-#: templates/admin-page.php:455
-msgid "Search risks"
-msgstr ""
-
-#: templates/admin-page.php:460
-msgid "Search plugin or reason"
-msgstr ""
-
-#: templates/admin-page.php:465
-msgid "Sort risks by"
-msgstr ""
-
-#: templates/admin-page.php:473
+#: templates/admin-page.php:380
 msgid "Plugin name"
 msgstr ""
 
-#: templates/admin-page.php:481
+#: templates/admin-page.php:381
 msgid "Risk count"
 msgstr ""
 
-#: templates/admin-page.php:489
+#: templates/admin-page.php:382
 msgid "Version gap"
 msgstr ""
 
-#: templates/admin-page.php:497
+#: templates/admin-page.php:383
 msgid "Local version"
 msgstr ""
 
-#: templates/admin-page.php:516
+#: templates/admin-page.php:400
+msgid "Search risks"
+msgstr ""
+
+#: templates/admin-page.php:405
+msgid "Search plugin or reason"
+msgstr ""
+
+#: templates/admin-page.php:409
+msgid "Sort risks by"
+msgstr ""
+
+#: templates/admin-page.php:420
 msgid "Sort order"
 msgstr ""
 
-#: templates/admin-page.php:519
+#: templates/admin-page.php:422
 msgid "Ascending"
 msgstr ""
 
-#: templates/admin-page.php:522
+#: templates/admin-page.php:423
 msgid "Descending"
 msgstr ""
 
-#: templates/admin-page.php:525
+#: templates/admin-page.php:425
 msgid "Apply"
 msgstr ""
 
-#: templates/admin-page.php:529
+#: templates/admin-page.php:428
 msgid "Previous page"
 msgstr ""
 
-#: templates/admin-page.php:531
+#: templates/admin-page.php:430
 msgid "Next page"
 msgstr ""
 
-#: templates/admin-page.php:623
+#: templates/admin-page.php:482
 msgid "WPScan vulnerabilities:"
 msgstr ""
 
-#: templates/admin-page.php:658
+#: templates/admin-page.php:515
 msgid "Ignore"
 msgstr ""
 
-#: templates/admin-page.php:674
+#: templates/admin-page.php:528
 msgid "Ignored Plugins"
 msgstr ""
 
-#: templates/admin-page.php:677
+#: templates/admin-page.php:530
 msgid "No plugins are being ignored."
 msgstr ""
 
-#: templates/admin-page.php:699
-msgid "Settings and notifications"
+#: templates/admin-page.php:532
+msgid "Ignored plugins are skipped by every scan. Select one to watch it again."
 msgstr ""
 
-#: templates/admin-page.php:701
-msgid "Save and test buttons save all settings on this form, then send a test to the selected channel."
+#: templates/admin-page.php:543
+msgid "Stop ignoring"
 msgstr ""
 
-#: templates/admin-page.php:707
-#: templates/admin-page.php:709
-msgid "History retention"
+#: templates/admin-page.php:555
+msgid "Scan History"
 msgstr ""
 
-#: templates/admin-page.php:720
-msgid "Number of recent scans to keep available for review and download (maximum 15)."
+#: templates/admin-page.php:566
+msgid "Scanning"
 msgstr ""
 
-#: templates/admin-page.php:725
-#: templates/admin-page.php:749
-msgid "Scan frequency"
-msgstr ""
-
-#: templates/admin-page.php:728
+#: templates/admin-page.php:568
 msgid "Choose how often the automatic scan should run."
 msgstr ""
 
 #. translators: 1: interval minutes, 2: duration hours
-#: templates/admin-page.php:731
+#: templates/admin-page.php:571
 #, php-format
 msgid "Testing mode sends notifications every %1$d minutes to all configured channels and automatically switches back to daily scans after %2$d hours."
 msgstr ""
 
+#: templates/admin-page.php:581
+msgid "Monday"
+msgstr ""
+
+#: templates/admin-page.php:582
+msgid "Tuesday"
+msgstr ""
+
+#: templates/admin-page.php:583
+msgid "Wednesday"
+msgstr ""
+
+#: templates/admin-page.php:584
+msgid "Thursday"
+msgstr ""
+
+#: templates/admin-page.php:585
+msgid "Friday"
+msgstr ""
+
+#: templates/admin-page.php:586
+msgid "Saturday"
+msgstr ""
+
+#: templates/admin-page.php:587
+msgid "Sunday"
+msgstr ""
+
+#: templates/admin-page.php:591
+msgid "Scan frequency"
+msgstr ""
+
 #. translators: %d: interval minutes
-#: templates/admin-page.php:756
+#: templates/admin-page.php:600
 #, php-format
 msgid "Testing (every %d minutes)"
 msgstr ""
 
-#: templates/admin-page.php:760
+#: templates/admin-page.php:605
 msgid "Manual (no automatic scans)"
 msgstr ""
 
-#: templates/admin-page.php:780
-msgid "Daily send time"
-msgstr ""
-
-#: templates/admin-page.php:790
-msgid "Time of day to start the daily scan in the WordPress site timezone."
-msgstr ""
-
-#: templates/admin-page.php:796
-msgid "Weekly send day"
-msgstr ""
-
-#: templates/admin-page.php:799
-msgid "Monday"
-msgstr ""
-
-#: templates/admin-page.php:800
-msgid "Tuesday"
-msgstr ""
-
-#: templates/admin-page.php:801
-msgid "Wednesday"
-msgstr ""
-
-#: templates/admin-page.php:802
-msgid "Thursday"
-msgstr ""
-
-#: templates/admin-page.php:803
-msgid "Friday"
-msgstr ""
-
-#: templates/admin-page.php:804
-msgid "Saturday"
-msgstr ""
-
-#: templates/admin-page.php:805
-msgid "Sunday"
-msgstr ""
-
-#: templates/admin-page.php:810
-msgid "Weekly send time"
-msgstr ""
-
-#: templates/admin-page.php:821
-msgid "Day and time to start the weekly scan in the WordPress site timezone."
-msgstr ""
-
 #. translators: 1: datetime, 2: relative time
-#: templates/admin-page.php:861
+#: templates/admin-page.php:621
 #, php-format
 msgid "Testing mode will automatically switch back to daily scans on %1$s (%2$s remaining)."
 msgstr ""
 
-#: templates/admin-page.php:877
-msgid "Email notifications"
+#: templates/admin-page.php:632
+msgid "Daily send time"
 msgstr ""
 
-#: templates/admin-page.php:881
-#: templates/admin-page.php:899
-#: templates/admin-page.php:915
-#: templates/admin-page.php:931
-#: templates/admin-page.php:948
-msgid "Enabled"
+#: templates/admin-page.php:641
+msgid "Time of day to start the daily scan in the WordPress site timezone."
 msgstr ""
 
-#: templates/admin-page.php:885
-msgid "Recipients (comma separated)"
+#: templates/admin-page.php:645
+msgid "Weekly send day"
 msgstr ""
 
-#: templates/admin-page.php:888
-msgid "Separate addresses with commas, semicolons, or spaces. WordPress administrator accounts are always included."
+#: templates/admin-page.php:653
+msgid "Weekly send time"
 msgstr ""
 
-#: templates/admin-page.php:889
-msgid "Email uses WordPress mail delivery. Your host must support sending mail, or you must configure an SMTP/mail plugin. Discord and other webhooks do not use this mail configuration."
+#: templates/admin-page.php:662
+msgid "Day and time to start the weekly scan in the WordPress site timezone."
 msgstr ""
 
-#: templates/admin-page.php:890
+#: templates/admin-page.php:667
+msgid "History retention"
+msgstr ""
+
+#: templates/admin-page.php:679
+msgid "Number of recent scans to keep available for review and download (maximum 15)."
+msgstr ""
+
+#: templates/admin-page.php:688
 msgid "Save and test email"
 msgstr ""
 
-#: templates/admin-page.php:895
-msgid "Discord notifications"
+#: templates/admin-page.php:690
+msgid "Recipients (comma separated)"
 msgstr ""
 
-#: templates/admin-page.php:903
-msgid "Discord webhook URL"
+#: templates/admin-page.php:693
+msgid "Separate addresses with commas, semicolons, or spaces. WordPress administrator accounts are always included."
 msgstr ""
 
-#: templates/admin-page.php:906
+#: templates/admin-page.php:694
+msgid "Email uses WordPress mail delivery. Your host must support sending mail, or you must configure an SMTP/mail plugin. Discord and other webhooks do not use this mail configuration."
+msgstr ""
+
+#: templates/admin-page.php:699
 msgid "Save and test Discord"
 msgstr ""
 
-#: templates/admin-page.php:911
-msgid "Slack notifications"
+#: templates/admin-page.php:701
+msgid "Discord webhook URL"
 msgstr ""
 
-#: templates/admin-page.php:919
-msgid "Slack webhook URL"
-msgstr ""
-
-#: templates/admin-page.php:922
+#: templates/admin-page.php:707
 msgid "Save and test Slack"
 msgstr ""
 
-#: templates/admin-page.php:927
-msgid "Microsoft Teams notifications"
+#: templates/admin-page.php:709
+msgid "Slack webhook URL"
 msgstr ""
 
-#: templates/admin-page.php:935
-msgid "Teams webhook URL"
-msgstr ""
-
-#: templates/admin-page.php:938
-msgid "Supports Microsoft Teams Workflows and existing Incoming Webhook connectors."
-msgstr ""
-
-#: templates/admin-page.php:939
+#: templates/admin-page.php:715
 msgid "Save and test Teams"
 msgstr ""
 
-#: templates/admin-page.php:944
-msgid "Generic webhook"
+#: templates/admin-page.php:717
+msgid "Teams webhook URL"
 msgstr ""
 
-#: templates/admin-page.php:952
-msgid "Webhook URL"
+#: templates/admin-page.php:720
+msgid "Supports Microsoft Teams Workflows and existing Incoming Webhook connectors."
 msgstr ""
 
-#: templates/admin-page.php:957
-msgid "Webhook secret (optional)"
-msgstr ""
-
-#: templates/admin-page.php:960
-msgid "Signs the exact JSON body with HMAC-SHA256 in the X-Watchdog-Signature header. Test messages are marked in the payload."
-msgstr ""
-
-#: templates/admin-page.php:962
+#: templates/admin-page.php:725
 msgid "Save and test webhook"
 msgstr ""
 
-#: templates/admin-page.php:967
+#: templates/admin-page.php:727
+msgid "Webhook URL"
+msgstr ""
+
+#: templates/admin-page.php:728
+msgid "Webhook secret (optional)"
+msgstr ""
+
+#: templates/admin-page.php:731
+msgid "Signs the exact JSON body with HMAC-SHA256 in the X-Watchdog-Signature header. Test messages are marked in the payload."
+msgstr ""
+
+#: templates/admin-page.php:737
+msgid "Notification channels"
+msgstr ""
+
+#: templates/admin-page.php:738
+msgid "Save and test buttons save all settings on this form, then send a test to the selected channel."
+msgstr ""
+
+#: templates/admin-page.php:760
+msgid "On"
+msgstr ""
+
+#: templates/admin-page.php:761
+msgid "Off"
+msgstr ""
+
+#. translators: %s: notification channel name.
+#: templates/admin-page.php:768
+#, php-format
+msgid "Enable %s notifications"
+msgstr ""
+
+#: templates/admin-page.php:803
+msgid "Vulnerability data"
+msgstr ""
+
+#: templates/admin-page.php:805
 msgid "WPScan API key"
 msgstr ""
 
-#: templates/admin-page.php:970
+#: templates/admin-page.php:815
 msgid "Optional. Provide your own WPScan API key to enrich vulnerability reports."
 msgstr ""
 
-#: templates/admin-page.php:974
+#: templates/admin-page.php:821
 msgid "Save settings"
 msgstr ""
 
-#: templates/history.php:21
+#: templates/admin-page.php:829
+msgid "Scheduler"
+msgstr ""
+
+#: templates/admin-page.php:831
+msgid "WP-Cron disabled"
+msgstr ""
+
+#: templates/admin-page.php:833
+msgid "WP-Cron enabled"
+msgstr ""
+
+#: templates/admin-page.php:837
+msgid "WP-Cron appears disabled. Use a real cron job or the server endpoint below to keep scans running."
+msgstr ""
+
+#: templates/admin-page.php:839
+msgid "WP-Cron is enabled. Scheduled tasks depend on site traffic or a server cron job."
+msgstr ""
+
+#: templates/admin-page.php:843
+msgid "Trigger scans from a server cron job"
+msgstr ""
+
+#: templates/admin-page.php:846
+msgid "Server cron endpoint:"
+msgstr ""
+
+#: templates/admin-page.php:848
+#: templates/admin-page.php:854
+#: templates/admin-page.php:859
+msgid "Copy"
+msgstr ""
+
+#: templates/admin-page.php:852
+msgid "Generated Cron secret:"
+msgstr ""
+
+#: templates/admin-page.php:857
+msgid "Authenticated command:"
+msgstr ""
+
+#: templates/admin-page.php:861
+msgid "Use POST and keep the generated secret private. The header-authenticated request can trigger scans or notification retries even when wp-cron is disabled."
+msgstr ""
+
+#: templates/admin-page.php:870
+msgid "Queue status"
+msgstr ""
+
+#. translators: %s: number of queued jobs.
+#: templates/admin-page.php:875
+#, php-format
+msgid "Queued jobs: %s"
+msgstr ""
+
+#. translators: 1: scheduled time
+#: templates/admin-page.php:886
+#, php-format
+msgid "Next attempt: %1$s"
+msgstr ""
+
+#: templates/admin-page.php:892
+msgid "No pending notifications in the queue."
+msgstr ""
+
+#: templates/admin-page.php:898
+msgid "Captured notification payloads"
+msgstr ""
+
+#: templates/admin-page.php:900
+msgid "Delivery failed"
+msgstr ""
+
+#: templates/admin-page.php:909
+msgid "Unknown channel"
+msgstr ""
+
+#. translators: 1: human readable time, 2: channel name
+#: templates/admin-page.php:916
+#, php-format
+msgid "Last failure recorded %1$s via %2$s."
+msgstr ""
+
+#: templates/admin-page.php:931
+msgid "Re-queue payload"
+msgstr ""
+
+#: templates/admin-page.php:939
+msgid "Download payload"
+msgstr ""
+
+#: templates/admin-page.php:944
+msgid "No failed notification payload has been captured yet."
+msgstr ""
+
+#: templates/history.php:14
 msgid "No scans have been recorded yet. Run a scan to populate your history."
 msgstr ""
 
 #. translators: 1: number of scans shown, 2: total scans retained
-#: templates/history.php:30
+#: templates/history.php:20
 #, php-format
 msgid "Showing the last %1$s scans (retaining %2$s in total)."
 msgstr ""
 
 #. translators: %s: number of risks.
-#: templates/history.php:55
+#: templates/history.php:41
 #, php-format
 msgid "%s risk"
 msgid_plural "%s risks"
 msgstr[0] ""
 msgstr[1] ""
 
-#: templates/history.php:69
-msgid "Download the report for this run:"
-msgstr ""
-
-#: templates/history.php:73
+#: templates/history.php:48
 msgid "Download JSON"
 msgstr ""
 
-#: templates/history.php:76
+#: templates/history.php:51
 msgid "Download CSV"
 msgstr ""

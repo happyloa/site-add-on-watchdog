@@ -1,5 +1,6 @@
 <?php
 
+use Brain\Monkey\Actions;
 use Brain\Monkey\Functions;
 use Watchdog\Models\Risk;
 use Watchdog\Repository\RiskRepository;
@@ -327,5 +328,67 @@ class ScannerTest extends TestCase
         $second = $scanner->scan();
         self::assertSame(['broken', 'healthy', 'broken', 'healthy'], $requests);
         self::assertContains('An update is available in the plugin directory.', $second[0]->reasons);
+    }
+
+    public function testPluginsMissingFromTheDirectoryStillGetVulnerabilityLookups(): void
+    {
+        Functions\when('get_plugins')->justReturn([
+            'premium/premium.php' => ['Name' => 'Premium Plugin', 'Version' => '2.0.0'],
+        ]);
+        Functions\when('sanitize_title')->alias(static fn ($value) => $value);
+        Functions\when('__')->alias(static fn ($text) => $text);
+        Functions\when('get_option')->alias(static fn () => []);
+
+        $transients = [];
+        Functions\when('get_transient')->alias(
+            static function (string $key) use (&$transients) {
+                return $transients[$key] ?? false;
+            }
+        );
+        Functions\when('set_transient')->alias(
+            static function (string $key, $value) use (&$transients): bool {
+                $transients[$key] = $value;
+
+                return true;
+            }
+        );
+
+        $notFound = new class {
+            public function get_error_message(): string
+            {
+                return 'Plugin not found.';
+            }
+        };
+        Functions\when('is_wp_error')->alias(static fn ($value): bool => $value === $notFound);
+        $directoryRequests = 0;
+        Functions\when('plugins_api')->alias(static function () use ($notFound, &$directoryRequests) {
+            $directoryRequests++;
+
+            return $notFound;
+        });
+        Actions\expectDone('site_add_on_watchdog_diagnostic')->never();
+
+        $wpscanClient = new class extends WPScanClient {
+            public function __construct()
+            {
+            }
+
+            public function fetchVulnerabilities(string $pluginSlug, string $pluginVersion = ''): array
+            {
+                return [['title' => 'SQL injection', 'cvss_score' => 9.8, 'fixed_in' => '2.1.0']];
+            }
+        };
+        $scanner = new Scanner(new RiskRepository(), new VersionComparator(), $wpscanClient);
+
+        $risks = $scanner->scan();
+
+        self::assertCount(1, $risks);
+        self::assertSame('premium', $risks[0]->pluginSlug);
+        self::assertNull($risks[0]->remoteVersion);
+        self::assertSame(['Active vulnerabilities reported by WPScan.'], $risks[0]->reasons);
+        self::assertSame('severe', $risks[0]->details['vulnerabilities'][0]['severity']);
+
+        $scanner->scan();
+        self::assertSame(1, $directoryRequests, 'The missing directory entry should be cached.');
     }
 }

@@ -1,6 +1,6 @@
 # Site Add-on Watchdog architecture
 
-Version 1.9.0 keeps the WordPress entry file deliberately small and puts each responsibility behind a focused class.
+Version 1.10.0 keeps the WordPress entry file deliberately small and puts each responsibility behind a focused class.
 
 ```text
 site-add-on-watchdog.php
@@ -23,11 +23,13 @@ site-add-on-watchdog.php
 
 - `Bootstrap` is the composition root. Constructors receive dependencies and should not perform network requests.
 - `Plugin` owns WordPress hooks and coordinates use cases; scanning and message formatting stay in their own services.
-- `RiskRepository` and `SettingsRepository` are the only classes that own the plugin's persisted option shapes and legacy migration.
-- `Scanner` contains provider isolation and cached successful WordPress.org lookups. A temporary lookup failure keeps that plugin's previous risk and does not abort the remaining scan.
+- `RiskRepository` and `SettingsRepository` own the shapes of the risk and settings options. `NotificationQueue` owns the queue and `Plugin` owns the cron status. The `MigratesLegacyOptions` trait holds the fallback to the option names used before the rename.
+- `uninstall.php` deletes those options and the scheduled events when the plugin is deleted. Add any new option to its list.
+- `Scanner` contains provider isolation and cached WordPress.org lookups. A plugin with no directory entry skips the version checks and still gets its WPScan lookup. A temporary lookup failure keeps that plugin's previous risk and does not abort the remaining scan.
+- `Plugin::schedule()` runs on every request, so it must stay cheap. It writes the cron status only when the status changes.
 - `Notifier` creates delivery jobs, while `MessageFormatter` owns platform payload formats and `NotificationQueue` owns retry state.
 - Email uses the site's WordPress mail transport. Temporary `wp_mail_failed` listeners capture provider errors, and mail plugin exceptions are contained so other channels can continue. A successful return confirms acceptance for sending, not inbox delivery.
-- `AdminPage` handles permissions, nonces, redirects, and rendering. Sorting remains independently testable through `RiskSorter`.
+- `AdminPage` handles permissions, nonces, redirects, and rendering. Sorting remains independently testable through `RiskSorter`, which also supplies the sort and search values the risk table script reads.
 
 ## Extension points
 

@@ -1,487 +1,671 @@
 (function () {
-    'use strict';
+  "use strict";
 
-    const i18n = window.siteAddOnWatchdogTable || {};
+  const i18n = window.siteAddOnWatchdogTable || {};
 
-    /**
-     * @param {HTMLElement} tableWrapper
-     */
-    function initTable(tableWrapper) {
-        const tbody = tableWrapper.querySelector('tbody');
-        if (!tbody) {
-            return;
+  /**
+   * @param {HTMLElement} tableWrapper
+   */
+  function initTable(tableWrapper) {
+    const tbody = tableWrapper.querySelector("tbody");
+    if (!tbody) {
+      return;
+    }
+
+    const perPage = parseInt(tableWrapper.dataset.perPage || "10", 10);
+    const baseRows = Array.from(tbody.querySelectorAll("tr"));
+    let rows = baseRows.slice();
+    const pagination = tableWrapper.querySelector("[data-pagination]");
+    const statusEl = tableWrapper.querySelector("[data-page-status]");
+    const prevBtn = pagination
+      ? pagination.querySelector('[data-action="prev"]')
+      : null;
+    const nextBtn = pagination
+      ? pagination.querySelector('[data-action="next"]')
+      : null;
+    const headers = Array.from(
+      tableWrapper.querySelectorAll("[data-sort-key]"),
+    );
+    const searchInput = tableWrapper.querySelector("[data-risk-search]");
+    const sortSelect = tableWrapper.querySelector("[data-risk-sort]");
+    const orderSelect = tableWrapper.querySelector("[data-risk-order]");
+
+    const state = {
+      page: 1,
+      perPage: Number.isFinite(perPage) && perPage > 0 ? perPage : rows.length,
+      sortKey: null,
+      sortOrder: "asc",
+      filterQuery: searchInput ? searchInput.value.trim() : "",
+    };
+
+    const initialHeader = headers.find((header) =>
+      header.hasAttribute("data-sort-initial"),
+    );
+    if (initialHeader) {
+      state.sortKey = initialHeader.getAttribute("data-sort-key");
+      state.sortOrder =
+        initialHeader.getAttribute("data-sort-default") || "asc";
+    }
+
+    const VERSION_SORT_KEYS = new Set(["sortLocal", "sortRemote"]);
+    const NUMERIC_SORT_KEYS = new Set(["sortRiskCount", "sortVersionGap"]);
+    const NUMERIC_TOKEN_PATTERN = /^\d+$/;
+
+    if (sortSelect) {
+      const selectedOption = sortSelect.selectedOptions[0];
+      if (selectedOption && selectedOption.dataset.sortKey) {
+        state.sortKey = selectedOption.dataset.sortKey;
+        state.sortOrder = orderSelect
+          ? orderSelect.value
+          : selectedOption.dataset.sortDefault || "asc";
+      }
+    }
+
+    function getSortValue(row, key, options = {}) {
+      const { raw = false } = options;
+
+      if (NUMERIC_SORT_KEYS.has(key)) {
+        const datasetKey = key.replace(/-([a-z])/g, (_, char) =>
+          char.toUpperCase(),
+        );
+        const value = row.dataset[datasetKey];
+        const parsed = value ? parseFloat(value) : 0;
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+
+      if (VERSION_SORT_KEYS.has(key)) {
+        const columnKey = key === "sortLocal" ? "local" : "remote";
+        const text = (
+          row.querySelector(`[data-column="${columnKey}"]`)?.textContent || ""
+        ).trim();
+        if (!text) {
+          return raw ? "" : null;
+        }
+        if (text.toLowerCase() === "n/a") {
+          return raw ? "N/A" : null;
+        }
+        return raw ? text : text.toLowerCase();
+      }
+
+      const datasetKey = key.replace(/-([a-z])/g, (_, char) =>
+        char.toUpperCase(),
+      );
+      const value = row.dataset[datasetKey];
+      if (value !== undefined) {
+        return raw ? value : value.toLowerCase();
+      }
+      const fallback = (
+        row.querySelector(`[data-column="${key}"]`)?.textContent || ""
+      ).trim();
+      return raw ? fallback : fallback.toLowerCase();
+    }
+
+    function parseVersionForSort(value) {
+      if (typeof value !== "string") {
+        return { tokens: [], isMissing: true };
+      }
+
+      const trimmed = value.trim();
+      if (!trimmed || trimmed.toLowerCase() === "n/a") {
+        return { tokens: [], isMissing: true };
+      }
+
+      const tokens = trimmed.match(/[0-9]+|[a-zA-Z]+/g) || [];
+      return { tokens, isMissing: tokens.length === 0 };
+    }
+
+    function compareVersionTokens(a, b) {
+      if (a.isMissing && b.isMissing) {
+        return 0;
+      }
+
+      if (a.isMissing) {
+        return 1;
+      }
+
+      if (b.isMissing) {
+        return -1;
+      }
+
+      const maxLength = Math.max(a.tokens.length, b.tokens.length);
+      for (let index = 0; index < maxLength; index += 1) {
+        const tokenA = a.tokens[index];
+        const tokenB = b.tokens[index];
+
+        if (tokenA === undefined && tokenB === undefined) {
+          return 0;
         }
 
-        const perPage = parseInt(tableWrapper.dataset.perPage || '10', 10);
-        const baseRows = Array.from(tbody.querySelectorAll('tr'));
-        let rows = baseRows.slice();
-        const pagination = tableWrapper.querySelector('[data-pagination]');
-        const statusEl = tableWrapper.querySelector('[data-page-status]');
-        const prevBtn = pagination ? pagination.querySelector('[data-action="prev"]') : null;
-        const nextBtn = pagination ? pagination.querySelector('[data-action="next"]') : null;
-        const headers = Array.from(tableWrapper.querySelectorAll('[data-sort-key]'));
-        const searchInput = tableWrapper.querySelector('[data-risk-search]');
-        const sortSelect = tableWrapper.querySelector('[data-risk-sort]');
-        const orderSelect = tableWrapper.querySelector('[data-risk-order]');
-
-        const state = {
-            page: 1,
-            perPage: Number.isFinite(perPage) && perPage > 0 ? perPage : rows.length,
-            sortKey: null,
-            sortOrder: 'asc',
-            filterQuery: searchInput ? searchInput.value.trim() : ''
-        };
-
-        const initialHeader = headers.find((header) => header.hasAttribute('data-sort-initial'));
-        if (initialHeader) {
-            state.sortKey = initialHeader.getAttribute('data-sort-key');
-            state.sortOrder = initialHeader.getAttribute('data-sort-default') || 'asc';
-        }
-
-        const VERSION_SORT_KEYS = new Set(['sortLocal', 'sortRemote']);
-        const NUMERIC_SORT_KEYS = new Set(['sortRiskCount', 'sortVersionGap']);
-        const NUMERIC_TOKEN_PATTERN = /^\d+$/;
-
-        if (sortSelect) {
-            const selectedOption = sortSelect.selectedOptions[0];
-            if (selectedOption && selectedOption.dataset.sortKey) {
-                state.sortKey = selectedOption.dataset.sortKey;
-                state.sortOrder = orderSelect
-                    ? orderSelect.value
-                    : (selectedOption.dataset.sortDefault || 'asc');
-            }
-        }
-
-        function getSortValue(row, key, options = {}) {
-            const { raw = false } = options;
-
-            if (NUMERIC_SORT_KEYS.has(key)) {
-                const datasetKey = key.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
-                const value = row.dataset[datasetKey];
-                const parsed = value ? parseFloat(value) : 0;
-                return Number.isFinite(parsed) ? parsed : 0;
-            }
-
-            if (VERSION_SORT_KEYS.has(key)) {
-                const columnKey = key === 'sortLocal' ? 'local' : 'remote';
-                const text = (row.querySelector(`[data-column="${columnKey}"]`)?.textContent || '').trim();
-                if (!text) {
-                    return raw ? '' : null;
-                }
-                if (text.toLowerCase() === 'n/a') {
-                    return raw ? 'N/A' : null;
-                }
-                return raw ? text : text.toLowerCase();
-            }
-
-            const datasetKey = key.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
-            const value = row.dataset[datasetKey];
-            if (value !== undefined) {
-                return raw ? value : value.toLowerCase();
-            }
-            const fallback = (row.querySelector(`[data-column="${key}"]`)?.textContent || '').trim();
-            return raw ? fallback : fallback.toLowerCase();
-        }
-
-        function parseVersionForSort(value) {
-            if (typeof value !== 'string') {
-                return { tokens: [], isMissing: true };
-            }
-
-            const trimmed = value.trim();
-            if (!trimmed || trimmed.toLowerCase() === 'n/a') {
-                return { tokens: [], isMissing: true };
-            }
-
-            const tokens = trimmed.match(/[0-9]+|[a-zA-Z]+/g) || [];
-            return { tokens, isMissing: tokens.length === 0 };
-        }
-
-        function compareVersionTokens(a, b) {
-            if (a.isMissing && b.isMissing) {
-                return 0;
-            }
-
-            if (a.isMissing) {
-                return 1;
-            }
-
-            if (b.isMissing) {
-                return -1;
-            }
-
-            const maxLength = Math.max(a.tokens.length, b.tokens.length);
-            for (let index = 0; index < maxLength; index += 1) {
-                const tokenA = a.tokens[index];
-                const tokenB = b.tokens[index];
-
-                if (tokenA === undefined && tokenB === undefined) {
-                    return 0;
-                }
-
-                if (tokenA === undefined) {
-                    if (tokenB === undefined) {
-                        return 0;
-                    }
-                    const bIsNumeric = NUMERIC_TOKEN_PATTERN.test(tokenB);
-                    return bIsNumeric ? -1 : 1;
-                }
-
-                if (tokenB === undefined) {
-                    const aIsNumeric = NUMERIC_TOKEN_PATTERN.test(tokenA);
-                    return aIsNumeric ? 1 : -1;
-                }
-
-                const aIsNumeric = NUMERIC_TOKEN_PATTERN.test(tokenA);
-                const bIsNumeric = NUMERIC_TOKEN_PATTERN.test(tokenB);
-
-                if (aIsNumeric && bIsNumeric) {
-                    const diff = parseInt(tokenA, 10) - parseInt(tokenB, 10);
-                    if (diff !== 0) {
-                        return diff;
-                    }
-                    continue;
-                }
-
-                if (aIsNumeric && !bIsNumeric) {
-                    return 1;
-                }
-
-                if (!aIsNumeric && bIsNumeric) {
-                    return -1;
-                }
-
-                const tokenALower = tokenA.toLowerCase();
-                const tokenBLower = tokenB.toLowerCase();
-                if (tokenALower === tokenBLower) {
-                    continue;
-                }
-
-                return tokenALower > tokenBLower ? 1 : -1;
-            }
-
+        if (tokenA === undefined) {
+          if (tokenB === undefined) {
             return 0;
+          }
+          const bIsNumeric = NUMERIC_TOKEN_PATTERN.test(tokenB);
+          return bIsNumeric ? -1 : 1;
         }
 
-        function updateSortIndicators() {
-            headers.forEach((header) => {
-                const sortKey = header.getAttribute('data-sort-key');
-                if (!sortKey) {
-                    return;
-                }
-                if (sortKey === state.sortKey) {
-                    header.setAttribute('aria-sort', state.sortOrder === 'asc' ? 'ascending' : 'descending');
-                } else {
-                    header.setAttribute('aria-sort', 'none');
-                }
-            });
+        if (tokenB === undefined) {
+          const aIsNumeric = NUMERIC_TOKEN_PATTERN.test(tokenA);
+          return aIsNumeric ? 1 : -1;
         }
 
-        function applyPagination() {
-            const totalPages = Math.max(1, Math.ceil(rows.length / state.perPage));
-            if (state.page > totalPages) {
-                state.page = totalPages;
-            }
+        const aIsNumeric = NUMERIC_TOKEN_PATTERN.test(tokenA);
+        const bIsNumeric = NUMERIC_TOKEN_PATTERN.test(tokenB);
 
-            const start = (state.page - 1) * state.perPage;
-            const end = start + state.perPage;
-
-            baseRows.forEach((row) => {
-                row.style.display = 'none';
-            });
-
-            if (statusEl) {
-                if (rows.length === 0) {
-                    statusEl.textContent = i18n.noResults || 'No results.';
-                } else {
-                    const template = i18n.pageStatus || 'Page %1$d of %2$d';
-                    statusEl.textContent = template
-                        .replace('%1$d', String(state.page))
-                        .replace('%2$d', String(totalPages));
-                }
-            }
-
-            if (prevBtn) {
-                prevBtn.disabled = state.page <= 1 || rows.length === 0;
-            }
-
-            if (nextBtn) {
-                nextBtn.disabled = state.page >= totalPages || rows.length === 0;
-            }
-
-            rows.forEach((row, index) => {
-                row.style.display = index >= start && index < end ? '' : 'none';
-            });
+        if (aIsNumeric && bIsNumeric) {
+          const diff = parseInt(tokenA, 10) - parseInt(tokenB, 10);
+          if (diff !== 0) {
+            return diff;
+          }
+          continue;
         }
 
-        function applySort() {
-            if (!state.sortKey) {
-                return;
-            }
-
-            const isVersionSort = VERSION_SORT_KEYS.has(state.sortKey);
-
-            const sortedRows = rows.slice().sort((a, b) => {
-                let comparison = 0;
-
-                if (NUMERIC_SORT_KEYS.has(state.sortKey)) {
-                    const aValue = getSortValue(a, state.sortKey);
-                    const bValue = getSortValue(b, state.sortKey);
-                    comparison = aValue - bValue;
-                } else if (isVersionSort) {
-                    const aVersion = parseVersionForSort(getSortValue(a, state.sortKey, { raw: true }));
-                    const bVersion = parseVersionForSort(getSortValue(b, state.sortKey, { raw: true }));
-                    comparison = compareVersionTokens(aVersion, bVersion);
-                } else {
-                    const aValue = getSortValue(a, state.sortKey);
-                    const bValue = getSortValue(b, state.sortKey);
-
-                    if (aValue !== bValue) {
-                        comparison = aValue > bValue ? 1 : -1;
-                    }
-                }
-
-                if (state.sortOrder === 'asc') {
-                    return comparison;
-                }
-
-                return -comparison;
-            });
-
-            rows = sortedRows;
-
-            sortedRows.forEach((row) => tbody.appendChild(row));
+        if (aIsNumeric && !bIsNumeric) {
+          return 1;
         }
 
-        function syncSortControls() {
-            if (sortSelect) {
-                const option = sortSelect.querySelector(`[data-sort-key="${state.sortKey}"]`);
-                if (option) {
-                    sortSelect.value = option.value;
-                }
-            }
-
-            if (orderSelect) {
-                orderSelect.value = state.sortOrder;
-            }
+        if (!aIsNumeric && bIsNumeric) {
+          return -1;
         }
 
-        function getFilterText(row) {
-            return (row.dataset.filterText || row.textContent || '').toLowerCase();
+        const tokenALower = tokenA.toLowerCase();
+        const tokenBLower = tokenB.toLowerCase();
+        if (tokenALower === tokenBLower) {
+          continue;
         }
 
-        function applyFilter() {
-            const query = state.filterQuery.trim().toLowerCase();
-            if (!query) {
-                rows = baseRows.slice();
-            } else {
-                rows = baseRows.filter((row) => getFilterText(row).includes(query));
-            }
+        return tokenALower > tokenBLower ? 1 : -1;
+      }
 
-            applySort();
-            updateSortIndicators();
-            syncSortControls();
-            state.page = 1;
-            applyPagination();
-        }
-
-        headers.forEach((header) => {
-            header.addEventListener('click', () => {
-                const sortKey = header.getAttribute('data-sort-key');
-                if (!sortKey) {
-                    return;
-                }
-
-                if (state.sortKey === sortKey) {
-                    state.sortOrder = state.sortOrder === 'asc' ? 'desc' : 'asc';
-                } else {
-                    state.sortKey = sortKey;
-                    state.sortOrder = header.getAttribute('data-sort-default') || 'asc';
-                }
-
-                applySort();
-                updateSortIndicators();
-                syncSortControls();
-                state.page = 1;
-                applyPagination();
-            });
-
-            header.setAttribute('aria-sort', 'none');
-        });
-
-        if (searchInput) {
-            searchInput.addEventListener('input', () => {
-                state.filterQuery = searchInput.value;
-                applyFilter();
-            });
-        }
-
-        if (sortSelect) {
-            sortSelect.addEventListener('change', () => {
-                const option = sortSelect.selectedOptions[0];
-                if (!option || !option.dataset.sortKey) {
-                    return;
-                }
-                state.sortKey = option.dataset.sortKey;
-                state.sortOrder = orderSelect ? orderSelect.value : (option.dataset.sortDefault || 'asc');
-                applySort();
-                updateSortIndicators();
-                syncSortControls();
-                state.page = 1;
-                applyPagination();
-            });
-        }
-
-        if (orderSelect) {
-            orderSelect.addEventListener('change', () => {
-                state.sortOrder = orderSelect.value;
-                applySort();
-                updateSortIndicators();
-                syncSortControls();
-                state.page = 1;
-                applyPagination();
-            });
-        }
-
-        if (prevBtn) {
-            prevBtn.addEventListener('click', () => {
-                if (state.page > 1) {
-                    state.page -= 1;
-                    applyPagination();
-                }
-            });
-        }
-
-        if (nextBtn) {
-            nextBtn.addEventListener('click', () => {
-                const totalPages = Math.max(1, Math.ceil(rows.length / state.perPage));
-                if (state.page < totalPages) {
-                    state.page += 1;
-                    applyPagination();
-                }
-            });
-        }
-
-        applyFilter();
+      return 0;
     }
 
-    function initNotificationToggles() {
-        document.querySelectorAll('[data-watchdog-toggle]').forEach((toggle) => {
-            const container = toggle.closest('[data-watchdog-notification]');
-            if (!container) {
-                return;
-            }
-
-            const fieldWrapper = container.querySelector('[data-watchdog-fields]');
-            if (!fieldWrapper) {
-                return;
-            }
-
-            const controlledFields = fieldWrapper.querySelectorAll('input, textarea, select');
-
-            const syncState = () => {
-                const disabled = !toggle.checked;
-                fieldWrapper.classList.toggle('wp-watchdog-notification-fields--disabled', disabled);
-
-                controlledFields.forEach((field) => {
-                    if ('readOnly' in field) {
-                        field.readOnly = disabled;
-                    }
-
-                    if (disabled) {
-                        field.setAttribute('aria-disabled', 'true');
-                    } else {
-                        field.removeAttribute('aria-disabled');
-                    }
-                });
-            };
-
-            toggle.addEventListener('change', syncState);
-            syncState();
-        });
+    function updateSortIndicators() {
+      headers.forEach((header) => {
+        const sortKey = header.getAttribute("data-sort-key");
+        if (!sortKey) {
+          return;
+        }
+        if (sortKey === state.sortKey) {
+          header.setAttribute(
+            "aria-sort",
+            state.sortOrder === "asc" ? "ascending" : "descending",
+          );
+        } else {
+          header.setAttribute("aria-sort", "none");
+        }
+      });
     }
 
-    function initFrequencyDescription() {
-        const select = document.getElementById('wp-watchdog-notification-frequency');
-        const description = document.querySelector('[data-watchdog-frequency-description]');
-        const optionContainer = document.querySelector('[data-watchdog-frequency-options]');
+    function applyPagination() {
+      const totalPages = Math.max(1, Math.ceil(rows.length / state.perPage));
+      if (state.page > totalPages) {
+        state.page = totalPages;
+      }
 
-        if (!select || !description) {
-            return;
+      const start = (state.page - 1) * state.perPage;
+      const end = start + state.perPage;
+
+      baseRows.forEach((row) => {
+        row.style.display = "none";
+      });
+
+      if (statusEl) {
+        if (rows.length === 0) {
+          statusEl.textContent = i18n.noResults || "No results.";
+        } else {
+          const template = i18n.pageStatus || "Page %1$d of %2$d";
+          statusEl.textContent = template
+            .replace("%1$d", String(state.page))
+            .replace("%2$d", String(totalPages));
+        }
+      }
+
+      if (prevBtn) {
+        prevBtn.disabled = state.page <= 1 || rows.length === 0;
+      }
+
+      if (nextBtn) {
+        nextBtn.disabled = state.page >= totalPages || rows.length === 0;
+      }
+
+      rows.forEach((row, index) => {
+        row.style.display = index >= start && index < end ? "" : "none";
+      });
+    }
+
+    function applySort() {
+      if (!state.sortKey) {
+        return;
+      }
+
+      const isVersionSort = VERSION_SORT_KEYS.has(state.sortKey);
+
+      const sortedRows = rows.slice().sort((a, b) => {
+        let comparison = 0;
+
+        if (NUMERIC_SORT_KEYS.has(state.sortKey)) {
+          const aValue = getSortValue(a, state.sortKey);
+          const bValue = getSortValue(b, state.sortKey);
+          comparison = aValue - bValue;
+        } else if (isVersionSort) {
+          const aVersion = parseVersionForSort(
+            getSortValue(a, state.sortKey, { raw: true }),
+          );
+          const bVersion = parseVersionForSort(
+            getSortValue(b, state.sortKey, { raw: true }),
+          );
+          comparison = compareVersionTokens(aVersion, bVersion);
+        } else {
+          const aValue = getSortValue(a, state.sortKey);
+          const bValue = getSortValue(b, state.sortKey);
+
+          if (aValue !== bValue) {
+            comparison = aValue > bValue ? 1 : -1;
+          }
         }
 
-        const defaultMessage = description.getAttribute('data-default-message') || description.textContent || '';
-        const testingMessage = description.getAttribute('data-testing-message') || defaultMessage;
+        if (state.sortOrder === "asc") {
+          return comparison;
+        }
 
-        const updateMessage = () => {
-            if (select.value === 'testing') {
-                description.textContent = testingMessage;
-                description.classList.add('wp-watchdog-frequency-description--testing');
-            } else {
-                description.textContent = defaultMessage;
-                description.classList.remove('wp-watchdog-frequency-description--testing');
-            }
-        };
+        return -comparison;
+      });
 
-        const updateOptionsVisibility = () => {
-            if (!optionContainer) {
-                return;
-            }
+      rows = sortedRows;
 
-            const active = select.value;
-            optionContainer.querySelectorAll('[data-watchdog-frequency-target]').forEach((section) => {
-                const target = section.getAttribute('data-watchdog-frequency-target');
-                const visible = target === active;
-                section.style.display = visible ? '' : 'none';
-
-                section.querySelectorAll('input, select').forEach((field) => {
-                    field.disabled = !visible;
-                });
-            });
-        };
-
-        select.addEventListener('change', () => {
-            updateMessage();
-            updateOptionsVisibility();
-        });
-
-        updateMessage();
-        updateOptionsVisibility();
+      sortedRows.forEach((row) => tbody.appendChild(row));
     }
 
-    function initFormBusyState() {
-        document.querySelectorAll('.wp-watchdog-admin form').forEach((form) => {
-            form.addEventListener('submit', (event) => {
-                if (form.dataset.submitting === 'true') {
-                    event.preventDefault();
-                    return;
-                }
+    function syncSortControls() {
+      if (sortSelect) {
+        const option = sortSelect.querySelector(
+          `[data-sort-key="${state.sortKey}"]`,
+        );
+        if (option) {
+          sortSelect.value = option.value;
+        }
+      }
 
-                form.dataset.submitting = 'true';
-                form.classList.add('is-busy');
-
-                const submitter = event.submitter;
-                if (submitter) {
-                    submitter.setAttribute('aria-busy', 'true');
-                }
-
-                // Delay disabling buttons so the clicked channel-test value remains in the request.
-                window.setTimeout(() => {
-                    form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach((button) => {
-                        button.disabled = true;
-                    });
-                }, 0);
-            });
-        });
+      if (orderSelect) {
+        orderSelect.value = state.sortOrder;
+      }
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-        document.querySelectorAll('[data-wp-watchdog-table]').forEach((tableWrapper) => {
-            initTable(tableWrapper);
-        });
+    function getFilterText(row) {
+      return (row.dataset.filterText || row.textContent || "").toLowerCase();
+    }
 
-        initNotificationToggles();
-        initFrequencyDescription();
-        initFormBusyState();
+    function applyFilter() {
+      const query = state.filterQuery.trim().toLowerCase();
+      if (!query) {
+        rows = baseRows.slice();
+      } else {
+        rows = baseRows.filter((row) => getFilterText(row).includes(query));
+      }
+
+      applySort();
+      updateSortIndicators();
+      syncSortControls();
+      state.page = 1;
+      applyPagination();
+    }
+
+    headers.forEach((header) => {
+      header.addEventListener("click", () => {
+        const sortKey = header.getAttribute("data-sort-key");
+        if (!sortKey) {
+          return;
+        }
+
+        if (state.sortKey === sortKey) {
+          state.sortOrder = state.sortOrder === "asc" ? "desc" : "asc";
+        } else {
+          state.sortKey = sortKey;
+          state.sortOrder = header.getAttribute("data-sort-default") || "asc";
+        }
+
+        applySort();
+        updateSortIndicators();
+        syncSortControls();
+        state.page = 1;
+        applyPagination();
+      });
+
+      header.setAttribute("aria-sort", "none");
     });
+
+    if (searchInput) {
+      searchInput.addEventListener("input", () => {
+        state.filterQuery = searchInput.value;
+        applyFilter();
+      });
+    }
+
+    if (sortSelect) {
+      sortSelect.addEventListener("change", () => {
+        const option = sortSelect.selectedOptions[0];
+        if (!option || !option.dataset.sortKey) {
+          return;
+        }
+        state.sortKey = option.dataset.sortKey;
+        state.sortOrder = orderSelect
+          ? orderSelect.value
+          : option.dataset.sortDefault || "asc";
+        applySort();
+        updateSortIndicators();
+        syncSortControls();
+        state.page = 1;
+        applyPagination();
+      });
+    }
+
+    if (orderSelect) {
+      orderSelect.addEventListener("change", () => {
+        state.sortOrder = orderSelect.value;
+        applySort();
+        updateSortIndicators();
+        syncSortControls();
+        state.page = 1;
+        applyPagination();
+      });
+    }
+
+    if (prevBtn) {
+      prevBtn.addEventListener("click", () => {
+        if (state.page > 1) {
+          state.page -= 1;
+          applyPagination();
+        }
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener("click", () => {
+        const totalPages = Math.max(1, Math.ceil(rows.length / state.perPage));
+        if (state.page < totalPages) {
+          state.page += 1;
+          applyPagination();
+        }
+      });
+    }
+
+    applyFilter();
+  }
+
+  function initNotificationToggles() {
+    document.querySelectorAll("[data-watchdog-toggle]").forEach((toggle) => {
+      const container = toggle.closest("[data-watchdog-notification]");
+      if (!container) {
+        return;
+      }
+
+      const fieldWrapper = container.querySelector("[data-watchdog-fields]");
+      if (!fieldWrapper) {
+        return;
+      }
+
+      // Hidden fields are still submitted, so a disabled channel keeps its saved values.
+      const syncState = () => {
+        fieldWrapper.hidden = !toggle.checked;
+      };
+
+      toggle.addEventListener("change", syncState);
+      syncState();
+    });
+  }
+
+  function initFrequencyDescription() {
+    const select = document.getElementById(
+      "wp-watchdog-notification-frequency",
+    );
+    const description = document.querySelector(
+      "[data-watchdog-frequency-description]",
+    );
+    const optionContainer = document.querySelector(
+      "[data-watchdog-frequency-options]",
+    );
+
+    if (!select || !description) {
+      return;
+    }
+
+    const defaultMessage =
+      description.getAttribute("data-default-message") ||
+      description.textContent ||
+      "";
+    const testingMessage =
+      description.getAttribute("data-testing-message") || defaultMessage;
+
+    const updateMessage = () => {
+      if (select.value === "testing") {
+        description.textContent = testingMessage;
+        description.classList.add("wp-watchdog-frequency-description--testing");
+      } else {
+        description.textContent = defaultMessage;
+        description.classList.remove(
+          "wp-watchdog-frequency-description--testing",
+        );
+      }
+    };
+
+    const updateOptionsVisibility = () => {
+      if (!optionContainer) {
+        return;
+      }
+
+      const active = select.value;
+      optionContainer
+        .querySelectorAll("[data-watchdog-frequency-target]")
+        .forEach((section) => {
+          const target = section.getAttribute("data-watchdog-frequency-target");
+          const visible = target === active;
+          section.style.display = visible ? "" : "none";
+
+          section.querySelectorAll("input, select").forEach((field) => {
+            field.disabled = !visible;
+          });
+        });
+    };
+
+    select.addEventListener("change", () => {
+      updateMessage();
+      updateOptionsVisibility();
+    });
+
+    updateMessage();
+    updateOptionsVisibility();
+  }
+
+  // WordPress exposes no variable for the admin accent color, and it differs
+  // between versions and color schemes, so take it from a primary button.
+  function initAccentColor() {
+    const root = document.querySelector(".wp-watchdog-admin");
+    const primary = root ? root.querySelector(".button-primary") : null;
+    if (!primary) {
+      return;
+    }
+
+    const color = window.getComputedStyle(primary).backgroundColor;
+    if (color && color !== "transparent" && color !== "rgba(0, 0, 0, 0)") {
+      root.style.setProperty("--watchdog-accent", color);
+    }
+  }
+
+  function initTabs() {
+    const root = document.querySelector(".wp-watchdog-admin");
+    if (!root) {
+      return;
+    }
+
+    const tabs = Array.from(root.querySelectorAll("[data-watchdog-tab]"));
+    const panels = Array.from(root.querySelectorAll("[data-watchdog-panel]"));
+    if (tabs.length === 0 || panels.length === 0) {
+      return;
+    }
+
+    const ids = panels.map((panel) => panel.id);
+    const storageKey = "siteAddOnWatchdogTab";
+
+    const readRemembered = () => {
+      try {
+        return window.sessionStorage.getItem(storageKey);
+      } catch (error) {
+        return null;
+      }
+    };
+
+    const activate = (id) => {
+      panels.forEach((panel) => {
+        panel.hidden = panel.id !== id;
+      });
+      tabs.forEach((tab) => {
+        if (tab.dataset.watchdogTab === id) {
+          tab.setAttribute("aria-current", "true");
+        } else {
+          tab.removeAttribute("aria-current");
+        }
+      });
+
+      try {
+        window.sessionStorage.setItem(storageKey, id);
+      } catch (error) {
+        // Storage can be unavailable in private windows; the tab still switches.
+      }
+    };
+
+    // The address bar uses "#tab-risks" for the "watchdog-risks" panel. A hash
+    // that matched the panel id would make the browser scroll past the header.
+    const hashFor = (id) => `#${id.replace("watchdog-", "tab-")}`;
+
+    const panelFromHash = () => {
+      const hash = window.location.hash.slice(1);
+      if (!hash) {
+        return null;
+      }
+
+      const id = hash.replace(/^tab-/, "watchdog-");
+      if (ids.includes(id)) {
+        return id;
+      }
+
+      const target = document.getElementById(hash);
+      const panel = target ? target.closest("[data-watchdog-panel]") : null;
+      return panel ? panel.id : null;
+    };
+
+    const requested = root.dataset.watchdogInitialTab || "";
+    const remembered = readRemembered();
+    let initial = panelFromHash();
+    if (!initial && ids.includes(requested)) {
+      initial = requested;
+    }
+    if (!initial && ids.includes(remembered)) {
+      initial = remembered;
+    }
+
+    root.classList.add("wp-watchdog-admin--js");
+    activate(initial || ids[0]);
+
+    root.addEventListener("click", (event) => {
+      const link = event.target.closest('a[href^="#"]');
+      if (!link) {
+        return;
+      }
+
+      const id = link.getAttribute("href").slice(1);
+      if (!ids.includes(id)) {
+        return;
+      }
+
+      event.preventDefault();
+      activate(id);
+      if (window.history.replaceState) {
+        window.history.replaceState(null, "", hashFor(id));
+      }
+    });
+
+    window.addEventListener("hashchange", () => {
+      const id = panelFromHash();
+      if (id) {
+        activate(id);
+      }
+    });
+  }
+
+  function initCopyButtons() {
+    if (!navigator.clipboard || !navigator.clipboard.writeText) {
+      return;
+    }
+
+    document.querySelectorAll("[data-watchdog-copy]").forEach((button) => {
+      const source = document.getElementById(button.dataset.watchdogCopy);
+      if (!source) {
+        return;
+      }
+
+      const label = button.textContent;
+      button.hidden = false;
+      button.addEventListener("click", () => {
+        navigator.clipboard
+          .writeText(source.textContent.trim())
+          .then(() => {
+            button.textContent = i18n.copied || "Copied";
+            window.setTimeout(() => {
+              button.textContent = label;
+            }, 2000);
+          })
+          .catch(() => {
+            // Clipboard permission was denied; the text can still be selected by hand.
+          });
+      });
+    });
+  }
+
+  function initFormBusyState() {
+    // Downloads leave the page in place, so those forms must stay usable.
+    document
+      .querySelectorAll(".wp-watchdog-admin form:not([data-watchdog-download])")
+      .forEach((form) => {
+        form.addEventListener("submit", (event) => {
+          if (form.dataset.submitting === "true") {
+            event.preventDefault();
+            return;
+          }
+
+          form.dataset.submitting = "true";
+          form.classList.add("is-busy");
+
+          const submitter = event.submitter;
+          if (submitter) {
+            submitter.setAttribute("aria-busy", "true");
+          }
+
+          // Delay disabling buttons so the clicked channel-test value remains in the request.
+          window.setTimeout(() => {
+            form
+              .querySelectorAll('button[type="submit"], input[type="submit"]')
+              .forEach((button) => {
+                button.disabled = true;
+              });
+          }, 0);
+        });
+      });
+  }
+
+  window.addEventListener("DOMContentLoaded", () => {
+    initAccentColor();
+    initTabs();
+
+    document
+      .querySelectorAll("[data-wp-watchdog-table]")
+      .forEach((tableWrapper) => {
+        initTable(tableWrapper);
+      });
+
+    initNotificationToggles();
+    initFrequencyDescription();
+    initCopyButtons();
+    initFormBusyState();
+  });
 })();

@@ -20,11 +20,11 @@ final class RiskSorter
                 'local' => $this->compareVersions($left->localVersion, $right->localVersion),
                 'remote' => $this->compareVersions($left->remoteVersion, $right->remoteVersion),
                 'reasons' => $this->compareText(
-                    $this->reasonSortValue($left),
-                    $this->reasonSortValue($right)
+                    $this->reasonText($left),
+                    $this->reasonText($right)
                 ),
-                'risk_count' => $this->riskSignalCount($left) <=> $this->riskSignalCount($right),
-                'version_gap' => $this->versionGapScore($left) <=> $this->versionGapScore($right),
+                'risk_count' => $this->signalCount($left) <=> $this->signalCount($right),
+                'version_gap' => $this->versionGap($left) <=> $this->versionGap($right),
                 default => 0,
             };
 
@@ -42,14 +42,14 @@ final class RiskSorter
         return $leftNormalized <=> $rightNormalized;
     }
 
-    private function normalizeText(string $value): string
+    public function normalizeText(string $value): string
     {
         $normalized = function_exists('remove_accents') ? remove_accents($value) : $value;
 
         return strtolower($normalized);
     }
 
-    private function reasonSortValue(Risk $risk): string
+    public function reasonText(Risk $risk): string
     {
         $parts = $risk->reasons;
         foreach ($this->vulnerabilities($risk) as $vulnerability) {
@@ -63,7 +63,7 @@ final class RiskSorter
         return implode(' ', $parts);
     }
 
-    private function riskSignalCount(Risk $risk): int
+    public function signalCount(Risk $risk): int
     {
         return count($risk->reasons) + count($this->vulnerabilities($risk));
     }
@@ -71,7 +71,7 @@ final class RiskSorter
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function vulnerabilities(Risk $risk): array
+    public function vulnerabilities(Risk $risk): array
     {
         $vulnerabilities = $risk->details['vulnerabilities'] ?? [];
 
@@ -153,7 +153,7 @@ final class RiskSorter
         return is_string($token) && preg_match('/^\d+$/', $token) === 1;
     }
 
-    private function versionGapScore(Risk $risk): int
+    public function versionGap(Risk $risk): int
     {
         return abs(
             $this->versionScore($risk->remoteVersion ?? '') - $this->versionScore($risk->localVersion)

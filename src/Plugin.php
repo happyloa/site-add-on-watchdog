@@ -3,6 +3,7 @@
 namespace Watchdog;
 
 use Watchdog\Models\Risk;
+use Watchdog\Repository\MigratesLegacyOptions;
 use Watchdog\Repository\RiskRepository;
 use Watchdog\Repository\SettingsRepository;
 use Watchdog\TestingMode;
@@ -11,6 +12,8 @@ use WP_REST_Request;
 
 class Plugin
 {
+    use MigratesLegacyOptions;
+
     private const PREFIX = Version::PREFIX;
     private const CRON_HOOK = self::PREFIX . '_scheduled_scan';
     private const QUEUE_CRON_HOOK = self::PREFIX . '_notification_queue';
@@ -53,8 +56,6 @@ class Plugin
         add_action(self::QUEUE_CRON_HOOK, [$this, 'flushNotificationQueue']);
         add_action('admin_notices', [$this, 'renderCronDiagnostics']);
         add_action('rest_api_init', [$this, 'registerRestRoutes']);
-
-        $this->cleanupUpdateCheckState();
 
         $this->hooksRegistered = true;
     }
@@ -136,7 +137,9 @@ class Plugin
     /**
      * Executes the scan and persists results.
      *
-     * @param bool $notify Whether notifications should be dispatched.
+     * @param bool   $notify  Whether notifications should be dispatched.
+     * @param string $context 'automatic', 'manual', 'rest', or 'rest-force'. Manual scans are
+     *                        throttled; forced REST scans notify even when nothing changed.
      *
      * @return bool Whether notifications were dispatched.
      */
@@ -175,8 +178,10 @@ class Plugin
         $hash          = $this->hashRisks($risks);
         $lastHash      = $settings['last_notification'] ?? '';
         $isTestingMode = ($settings['notifications']['frequency'] ?? 'daily') === 'testing';
+        $isForced      = $context === 'rest-force';
 
-        $shouldNotify = $notify && ($isTestingMode || (! empty($risks) && $hash !== $lastHash));
+        $shouldNotify = $notify
+            && ($isTestingMode || $isForced || (! empty($risks) && $hash !== $lastHash));
         $manualThrottle = $context === 'manual'
             && $this->isManualNotificationThrottled($settings, $runAt);
 
@@ -295,16 +300,8 @@ class Plugin
         }
     }
 
-    private function cleanupUpdateCheckState(): void
-    {
-        delete_option(self::UPDATE_CHECK_OPTION);
-        delete_option(self::LEGACY_UPDATE_CHECK_OPTION);
-    }
-
     private function scheduleNotificationQueueProcessor(): void
     {
-        $this->clearScheduledHook(self::LEGACY_QUEUE_CRON_HOOK);
-
         $timestamp = wp_next_scheduled(self::QUEUE_CRON_HOOK);
         $currentSchedule = $timestamp ? wp_get_schedule(self::QUEUE_CRON_HOOK) : false;
 
@@ -342,44 +339,42 @@ class Plugin
             return;
         }
 
-        $status = $this->getOptionWithLegacy(self::CRON_STATUS_OPTION, self::LEGACY_CRON_STATUS_OPTION, []);
-        if (! is_array($status)) {
+        $status = $this->getCronStatus();
+        if ($status['overdue_streak'] < 2) {
             return;
         }
 
-        if (! empty($status['cron_disabled'])) {
-            echo '<div class="notice notice-error"><p>'
-                . esc_html__(
-                    'WP-Cron appears disabled. Set a system cron job to trigger wp-cron.php for Site Add-on Watchdog.',
-                    'site-add-on-watchdog'
-                )
-                . '</p></div>';
+        // A disabled WP-Cron is a normal production setup when a system cron
+        // calls wp-cron.php, so only warn once the scheduled scan is late.
+        $message = $status['cron_disabled']
+            ? __(
+                // phpcs:ignore Generic.Files.LineLength.TooLong -- Translation source must remain one literal string.
+                'The scheduled Site Add-on Watchdog scan is overdue and WP-Cron is disabled on this site. Make sure a system cron job calls wp-cron.php.',
+                'site-add-on-watchdog'
+            )
+            : __(
+                'Site Add-on Watchdog scans are overdue. Ensure system cron calls wp-cron.php regularly.',
+                'site-add-on-watchdog'
+            );
 
-            return;
-        }
-
-        if (($status['overdue_streak'] ?? 0) >= 2) {
-            echo '<div class="notice notice-warning"><p>'
-                . esc_html__(
-                    'Site Add-on Watchdog scans are overdue. Ensure system cron calls wp-cron.php regularly.',
-                    'site-add-on-watchdog'
-                )
-                . '</p></div>';
-        }
+        echo '<div class="notice notice-warning"><p>' . esc_html($message) . '</p></div>';
     }
 
+    /**
+     * @return array{cron_disabled: bool, overdue_streak: int}
+     */
     public function getCronStatus(): array
     {
-        $status = $this->getOptionWithLegacy(self::CRON_STATUS_OPTION, self::LEGACY_CRON_STATUS_OPTION, []);
-        if (! is_array($status)) {
-            $status = [];
-        }
+        return $this->normalizeCronStatus(
+            $this->getOptionWithLegacy(self::CRON_STATUS_OPTION, self::LEGACY_CRON_STATUS_OPTION, [])
+        );
+    }
 
-        return [
-            'cron_disabled'  => ! empty($status['cron_disabled']),
-            'overdue_streak' => (int) ($status['overdue_streak'] ?? 0),
-            'last_checked'   => (int) ($status['last_checked'] ?? 0),
-        ];
+    public function getNextScanTimestamp(): ?int
+    {
+        $timestamp = wp_next_scheduled(self::CRON_HOOK);
+
+        return $timestamp ? (int) $timestamp : null;
     }
 
     public function getCronSecret(): string
@@ -438,26 +433,28 @@ class Plugin
         return defined('DISABLE_WP_CRON') && DISABLE_WP_CRON;
     }
 
+    /**
+     * Runs on every request, so it only writes when the status changes.
+     */
     private function recordCronStatus(bool $cronDisabled, bool $overdue): void
     {
-        $status = $this->getOptionWithLegacy(self::CRON_STATUS_OPTION, self::LEGACY_CRON_STATUS_OPTION, []);
-        if (! is_array($status)) {
-            $status = [
-                'overdue_streak' => 0,
-                'cron_disabled'  => false,
-            ];
+        $stored   = $this->getOptionWithLegacy(self::CRON_STATUS_OPTION, self::LEGACY_CRON_STATUS_OPTION, []);
+        $previous = $this->normalizeCronStatus($stored);
+        $status   = [
+            'cron_disabled'  => $cronDisabled,
+            'overdue_streak' => $overdue ? min(10, $previous['overdue_streak'] + 1) : 0,
+        ];
+
+        if ($stored === $status) {
+            return;
         }
 
-        $status['cron_disabled'] = $cronDisabled;
-        $status['last_checked']  = time();
+        // Autoloaded because the status is read on every request.
+        update_option(self::CRON_STATUS_OPTION, $status, true);
 
-        if ($overdue) {
-            $status['overdue_streak'] = min(10, (int) ($status['overdue_streak'] ?? 0) + 1);
-        } else {
-            $status['overdue_streak'] = 0;
+        if ($status === $previous) {
+            return;
         }
-
-        update_option(self::CRON_STATUS_OPTION, $status, false);
 
         if ($cronDisabled) {
             $this->logCronWarning('[Site Add-on Watchdog] WP-Cron appears disabled. '
@@ -466,6 +463,21 @@ class Plugin
             $this->logCronWarning('[Site Add-on Watchdog] Scheduled scans are overdue. '
                 . 'Ensure cron can reach wp-cron.php.');
         }
+    }
+
+    /**
+     * @return array{cron_disabled: bool, overdue_streak: int}
+     */
+    private function normalizeCronStatus(mixed $status): array
+    {
+        if (! is_array($status)) {
+            $status = [];
+        }
+
+        return [
+            'cron_disabled'  => ! empty($status['cron_disabled']),
+            'overdue_streak' => (int) ($status['overdue_streak'] ?? 0),
+        ];
     }
 
     private function logCronWarning(string $message): void
@@ -667,35 +679,6 @@ class Plugin
             'message' => __('Scan triggered successfully.', 'site-add-on-watchdog'),
             'queue'   => $queueResult,
         ];
-    }
-
-    private function getOptionWithLegacy(string $option, string $legacy, mixed $default): mixed
-    {
-        $value = get_option($option, $default);
-        if ($value !== $default) {
-            return $value;
-        }
-
-        $legacyValue = get_option($legacy, $default);
-        if ($legacyValue !== $default) {
-            update_option($option, $legacyValue, false);
-
-            return $legacyValue;
-        }
-
-        return $value;
-    }
-
-    public function validateCronRequest(WP_REST_Request $request): bool
-    {
-        [$provided] = $this->cronCredentialFromRequest($request);
-        $stored     = $this->getCronSecret();
-
-        if ($stored === '') {
-            return false;
-        }
-
-        return hash_equals($stored, $provided);
     }
 
     public function authorizeCronRequest(WP_REST_Request $request): bool|\WP_Error

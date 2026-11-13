@@ -4,7 +4,7 @@ Tags: security, plugins, monitoring, notifications
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.9.0
+Stable tag: 1.10.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,9 +16,9 @@ Site Add-on Watchdog keeps an eye on your site's plugins and warns you when:
 
 * A newer release is available for an installed plugin, with an additional warning when it is two or more minor releases behind.
 * The latest release's official changelog mentions security or vulnerability fixes.
-* (Optional) WPScan reports vulnerabilities affecting the installed version when you provide your own API key.
+* (Optional) WPScan reports vulnerabilities affecting the installed version when you provide your own API key. This also covers plugins that are not listed on WordPress.org.
 
-The plugin runs on a schedule you control—choose daily, weekly, a twenty-minute testing cadence, or rely on manual scans—and stores results locally. To compare public versions and changelogs, Watchdog looks up plugin slugs individually on WordPress.org and caches successful responses for six hours. WPScan lookups are optional. Email risk alerts to site administrators are enabled by default; webhook channels require setup and activation.
+The plugin runs on a schedule you control—choose daily, weekly, a twenty-minute testing cadence, or rely on manual scans—and stores results locally. To compare public versions and changelogs, Watchdog looks up plugin slugs individually on WordPress.org and caches each answer for six hours, including the answer that a plugin is not in the directory. A lookup that fails is retried on the next scan. WPScan lookups are optional. Email risk alerts to site administrators are enabled by default; webhook channels require setup and activation.
 
 === Privacy first ===
 
@@ -37,7 +37,7 @@ Watchdog uses the following external services under the stated conditions:
 
 === Admin tools ===
 
-* Focused dashboard with risk summaries, searchable history, delivery health, and manual actions.
+* Tabbed dashboard with a searchable risk table, downloadable scan history, delivery status, and manual actions.
 * Ignore list to suppress noisy plugins.
 * Validated notification settings with a save-and-test action for every channel.
 
@@ -82,7 +82,11 @@ Yes. Use the "Run manual scan" button on the Watchdog admin page.
 
 = How do I resend a failed notification payload? =
 
-Open the Watchdog admin page and check the **Delivery health** section. If a notification fails, the payload is captured there with buttons to re-queue or download it.
+Open the Watchdog admin page and select the **Delivery** tab. If a notification fails, the payload is captured there with buttons to re-queue or download it.
+
+= What happens to my data when I delete the plugin? =
+
+Deleting the plugin from the Plugins screen removes its settings, saved risks, ignore list, scan history, notification queue, and scheduled events. Deactivating it only stops the schedule and keeps the data.
 
 = Where can I find the test suite? =
 
@@ -92,7 +96,7 @@ Tests and the `phpunit.xml.dist` configuration are available in the public repos
 
 === Scheduled scans are not running ===
 
-Watchdog relies on WP-Cron to trigger scheduled scans and notifications. If you have set `DISABLE_WP_CRON` to `true` or your site receives very little traffic (so WP-Cron rarely runs), configure a system cron job to call either `wp-cron.php` or the plugin's REST endpoint. The admin **Delivery health** panel shows the endpoint and generated secret. Send the secret in an HTTP header so it does not appear in access logs; a typical example looks like this:
+Watchdog relies on WP-Cron to trigger scheduled scans and notifications. If you have set `DISABLE_WP_CRON` to `true` or your site receives very little traffic (so WP-Cron rarely runs), configure a system cron job to call either `wp-cron.php` or the plugin's REST endpoint. The **Delivery** tab on the Watchdog admin page shows the endpoint and generated secret. Send the secret in an HTTP header so it does not appear in access logs; a typical example looks like this:
 
 `curl -X POST -H "X-Watchdog-Cron-Key: YOUR_GENERATED_SECRET" https://example.com/wp-json/site-add-on-watchdog/v1/cron`
 
@@ -102,7 +106,7 @@ Testing-mode notifications also rely on this trigger, so be sure your cron job i
 
 Email uses WordPress's `wp_mail()` function and your site's mail configuration. Discord and other webhooks use HTTP, so a working webhook does not confirm that the server can send email.
 
-Use "Save and test email", then check Delivery health for a mail or SMTP error. Configure your host's mail service or an SMTP/mail plugin if needed. If WordPress accepts the test but no email arrives, check spam and your mail provider's delivery logs, sender verification, and SPF/DKIM settings. Acceptance for sending does not confirm inbox delivery.
+Use "Save and test email", then check the Delivery tab for a mail or SMTP error. Configure your host's mail service or an SMTP/mail plugin if needed. If WordPress accepts the test but no email arrives, check spam and your mail provider's delivery logs, sender verification, and SPF/DKIM settings. Acceptance for sending does not confirm inbox delivery.
 
 == CLI Usage ==
 
@@ -124,6 +128,16 @@ For automated checks, boot a WordPress/WP-CLI environment and run `wp watchdog s
 The development repository is available on GitHub: https://github.com/happyloa/site-add-on-watchdog. Clone it locally to review the source or run the test suite.
 
 == Changelog ==
+
+= 1.10.0 =
+* Split the dashboard into Risks, History, Settings, and Delivery tabs, and show when the last scan ran and when the next one is due.
+* Check plugins that are not in the WordPress.org directory against WPScan when an API key is configured.
+* Remove the plugin's saved data when the plugin is deleted.
+* Turn email alerts on by default, as documented. New installs had them off. Sites that never saved the Watchdog settings will start emailing alerts to administrators.
+* Show the WP-Cron notice only when the scheduled scan is overdue.
+* Stop writing to the database on every page load.
+* Remove an ignored plugin from the risk table at once, and show every table column on narrow screens.
+* Honor `force` on REST cron scan requests and stop repeating old notices.
 
 = 1.9.0 =
 * Identify test notifications and add event metadata to custom webhooks.
@@ -171,6 +185,9 @@ The development repository is available on GitHub: https://github.com/happyloa/s
 For earlier releases, see the full [GitHub changelog](https://github.com/happyloa/site-add-on-watchdog/blob/main/CHANGELOG.md).
 
 == Upgrade Notice ==
+
+= 1.10.0 =
+Email alerts to administrators are now on by default as documented. If you never saved the Watchdog settings and do not want them, switch Email off under Settings. Also adds a tabbed dashboard and removes a database write from every page load.
 
 = 1.9.0 =
 Adds custom webhook event metadata and clarifies test and scan status messages.

@@ -8,20 +8,24 @@ use Watchdog\Notifier;
 use Watchdog\Repository\RiskRepository;
 use Watchdog\Repository\SettingsRepository;
 use Watchdog\Version;
-use WP_Filesystem_Direct;
 
 class AdminPage
 {
     private const PREFIX = Version::PREFIX;
     private const MENU_SLUG = 'site-add-on-watchdog';
     private const HISTORY_DOWNLOAD_ACTION = self::PREFIX . '_history_download';
+    private const NOTICE_ARGS = [
+        'updated',
+        'scan',
+        'notifications',
+        'failed_notification',
+        'channel_test',
+        'channel_test_status',
+        '_wpnonce',
+    ];
 
     private ?string $menuHook = null;
     private bool $assetsEnqueued = false;
-    /**
-     * @var WP_Filesystem_Direct|null
-     */
-    private $filesystem = null;
     private readonly RiskSorter $riskSorter;
 
     public function __construct(
@@ -52,6 +56,24 @@ class AdminPage
             [$this, 'handleFailedNotificationDownload']
         );
         add_action('admin_enqueue_scripts', [$this, 'enqueueAssets']);
+        add_filter('removable_query_args', [$this, 'filterRemovableQueryArgs']);
+    }
+
+    /**
+     * Lets WordPress drop one-time notice arguments from the address bar so a
+     * reload does not show the same notice again.
+     *
+     * @param string[] $args
+     * @return string[]
+     */
+    public function filterRemovableQueryArgs(array $args): array
+    {
+        $page = filter_input(INPUT_GET, 'page', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        if ($page !== self::MENU_SLUG) {
+            return $args;
+        }
+
+        return array_merge($args, self::NOTICE_ARGS);
     }
 
     public function addMenu(): void
@@ -104,6 +126,11 @@ class AdminPage
         }
         $watchdogRiskSortSelection = $watchdogRiskSort !== '' ? $watchdogRiskSort : 'plugin';
         $watchdogRiskOrderSelection = $watchdogRiskOrder !== '' ? $watchdogRiskOrder : 'asc';
+        $watchdogRiskRows = $this->buildRiskRows($watchdogRisks);
+        $watchdogVulnerabilityCount = 0;
+        foreach ($watchdogRiskRows as $watchdogRiskRow) {
+            $watchdogVulnerabilityCount += count($watchdogRiskRow['vulnerabilities']);
+        }
 
         $watchdogSettingsError = get_transient(self::PREFIX . '_settings_error');
         if ($watchdogSettingsError !== false) {
@@ -139,6 +166,11 @@ class AdminPage
                 'csv'  => $this->buildHistoryDownloadUrl($watchdogRecord['run_at'], 'csv'),
             ];
         }
+
+        $watchdogLastScanAt = isset($watchdogHistoryRecords[0]['run_at'])
+            ? (int) $watchdogHistoryRecords[0]['run_at']
+            : null;
+        $watchdogNextScanAt = $this->plugin->getNextScanTimestamp();
 
         $watchdogLastFailedNotification = $this->notifier->getLastFailedNotification();
         $watchdogQueueStatus = $this->notifier->getQueueStatus();
@@ -258,7 +290,7 @@ class AdminPage
             $this->riskRepository->addIgnore($slug);
         }
 
-        wp_safe_redirect(wp_get_referer() ?: admin_url('admin.php?page=' . self::MENU_SLUG));
+        wp_safe_redirect($this->returnUrl());
         exit;
     }
 
@@ -272,7 +304,7 @@ class AdminPage
             $this->riskRepository->removeIgnore($slug);
         }
 
-        wp_safe_redirect(wp_get_referer() ?: admin_url('admin.php?page=' . self::MENU_SLUG));
+        wp_safe_redirect($this->returnUrl());
         exit;
     }
 
@@ -292,9 +324,7 @@ class AdminPage
         $this->guardAccess();
         check_admin_referer(self::PREFIX . '_send_notifications');
 
-        $force           = ! empty($_POST['force']);
-        $respectThrottle = empty($_POST['ignore_throttle']);
-        $result          = $this->plugin->sendNotifications($force, $respectThrottle);
+        $result = $this->plugin->sendNotifications(true);
 
         $this->redirectWithNotice(['notifications' => $result]);
         exit;
@@ -407,6 +437,7 @@ class AdminPage
             /* translators: 1: current page number, 2: total number of pages. */
             'pageStatus' => __('Page %1$d of %2$d', 'site-add-on-watchdog'),
             'noResults' => __('No risks match your search.', 'site-add-on-watchdog'),
+            'copied' => __('Copied', 'site-add-on-watchdog'),
         ]);
 
         $this->assetsEnqueued = true;
@@ -479,20 +510,8 @@ class AdminPage
             ];
         }
 
-        $target = 'php://output';
-
-        if ($target === 'php://output') {
-            $csvContent = $this->buildCsvContent($rows);
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CSV download response.
-            echo $csvContent;
-        } else {
-            $filesystem = $this->getFilesystem();
-            $csvContent  = $this->buildCsvContent($rows);
-
-            if (! $filesystem->put_contents($target, $csvContent)) {
-                wp_die(esc_html__('Unable to generate history export.', 'site-add-on-watchdog'));
-            }
-        }
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CSV download response.
+        echo $this->buildCsvContent($rows);
         exit;
     }
 
@@ -533,12 +552,21 @@ class AdminPage
     {
         $args['_wpnonce'] = wp_create_nonce(self::PREFIX . '_admin_notice');
 
-        wp_safe_redirect(
-            add_query_arg(
-                $args,
-                wp_get_referer() ?: admin_url('admin.php?page=' . self::MENU_SLUG)
-            )
-        );
+        wp_safe_redirect(add_query_arg($args, $this->returnUrl()));
+    }
+
+    /**
+     * The page to return to, without the notice arguments of an earlier action.
+     * Leaving them in would replay an old notice next to the new one.
+     */
+    private function returnUrl(): string
+    {
+        $referer = wp_get_referer();
+        if (! $referer) {
+            return admin_url('admin.php?page=' . self::MENU_SLUG);
+        }
+
+        return remove_query_arg(self::NOTICE_ARGS, $referer);
     }
 
     private function isNoticeNonceValid(): bool
@@ -553,43 +581,43 @@ class AdminPage
         return wp_verify_nonce($nonce, self::PREFIX . '_admin_notice') === 1;
     }
 
-    private function getFilesystem()
+    /**
+     * Prepares the sort and search attributes the risk table script reads.
+     *
+     * @param Risk[] $risks
+     * @return array<int, array{
+     *     risk: Risk,
+     *     vulnerabilities: array<int, array<string, mixed>>,
+     *     attributes: array<string, string>
+     * }>
+     */
+    private function buildRiskRows(array $risks): array
     {
-        if ($this->filesystem !== null) {
-            return $this->filesystem;
+        $rows = [];
+
+        foreach ($risks as $risk) {
+            $reasonText = $this->riskSorter->reasonText($risk);
+
+            $rows[] = [
+                'risk'            => $risk,
+                'vulnerabilities' => $this->riskSorter->vulnerabilities($risk),
+                'attributes'      => [
+                    'data-sort-plugin'      => $this->riskSorter->normalizeText($risk->pluginName),
+                    'data-sort-local'       => $this->riskSorter->normalizeText($risk->localVersion),
+                    'data-sort-remote'      => $this->riskSorter->normalizeText((string) $risk->remoteVersion),
+                    'data-sort-reasons'     => $this->riskSorter->normalizeText($reasonText),
+                    'data-sort-risk-count'  => (string) $this->riskSorter->signalCount($risk),
+                    'data-sort-version-gap' => (string) $this->riskSorter->versionGap($risk),
+                    'data-filter-text'      => $this->riskSorter->normalizeText(implode(' ', [
+                        $risk->pluginName,
+                        $risk->localVersion,
+                        (string) $risk->remoteVersion,
+                        $reasonText,
+                    ])),
+                ],
+            ];
         }
 
-        $this->ensureFilesystemDependenciesLoaded();
-
-        global $wp_filesystem;
-
-        if (! $wp_filesystem instanceof WP_Filesystem_Direct) {
-            WP_Filesystem();
-        }
-
-        if ($wp_filesystem instanceof WP_Filesystem_Direct) {
-            $this->filesystem = $wp_filesystem;
-
-            return $this->filesystem;
-        }
-
-        $this->filesystem = new WP_Filesystem_Direct(false);
-
-        return $this->filesystem;
-    }
-
-    private function ensureFilesystemDependenciesLoaded(): void
-    {
-        if (! function_exists('request_filesystem_credentials')) {
-            require_once ABSPATH . 'wp-admin/includes/file.php';
-        }
-
-        if (! class_exists('WP_Filesystem_Base')) {
-            require_once ABSPATH . 'wp-admin/includes/class-wp-filesystem-base.php';
-        }
-
-        if (! class_exists('WP_Filesystem_Direct')) {
-            require_once ABSPATH . 'wp-admin/includes/class-wp-filesystem-direct.php';
-        }
+        return $rows;
     }
 }

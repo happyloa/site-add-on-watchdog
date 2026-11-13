@@ -68,7 +68,7 @@ class SettingsRepository
             }
         }
 
-        $normalized = $this->normalizeStoredSettings($stored);
+        $normalized = $this->withoutNulls($this->normalizeStoredSettings($stored));
         $settings   = array_replace_recursive($defaults, $normalized);
 
         $settings['notifications']['frequency'] = $this->sanitizeFrequency($settings['notifications']['frequency']);
@@ -91,11 +91,14 @@ class SettingsRepository
         }
 
         $recipientList = $settings['notifications']['email']['recipients'] ?? '';
-        if (! is_string($recipientList) || trim($recipientList) === '') {
-            $settings['notifications']['email']['recipients'] = $this->buildAdministratorEmailList();
-        } else {
-            $settings['notifications']['email']['recipients'] = trim($recipientList);
+        $recipientList = is_string($recipientList) ? trim($recipientList) : '';
+        if ($recipientList === '' && $shouldPersistDefaults) {
+            // Prefill once, when the defaults are first stored. A field the site
+            // owner emptied stays empty: administrators are added at send time,
+            // and looking them up here would cost a user query on every request.
+            $recipientList = $this->buildAdministratorEmailList();
         }
+        $settings['notifications']['email']['recipients'] = $recipientList;
 
         $settings['history']['retention'] = $this->sanitizeRetention($settings['history']['retention'] ?? null);
 
@@ -393,6 +396,23 @@ class SettingsRepository
                 'retention' => $historyRetention,
             ],
         ];
+    }
+
+    /**
+     * A setting that was never saved is null after normalization. Merging that
+     * null over the defaults would switch default-on settings off, so drop it.
+     */
+    private function withoutNulls(array $values): array
+    {
+        foreach ($values as $key => $value) {
+            if (is_array($value)) {
+                $values[$key] = $this->withoutNulls($value);
+            } elseif ($value === null) {
+                unset($values[$key]);
+            }
+        }
+
+        return $values;
     }
 
     private function sanitizeFrequency(mixed $frequency): string

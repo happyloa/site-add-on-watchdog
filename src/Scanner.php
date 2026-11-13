@@ -11,6 +11,7 @@ use Watchdog\Version;
 class Scanner
 {
     private const REMOTE_CACHE_HOURS = 6;
+    private const NOT_IN_DIRECTORY = 'not_in_directory';
 
     public function __construct(
         private readonly RiskRepository $riskRepository,
@@ -228,6 +229,9 @@ class Scanner
         if (is_object($cached)) {
             return $cached;
         }
+        if ($cached === self::NOT_IN_DIRECTORY) {
+            return false;
+        }
         require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
 
         $result = plugins_api('plugin_information', [
@@ -239,6 +243,14 @@ class Scanner
         ]);
 
         if (is_wp_error($result)) {
+            if ($this->isMissingFromDirectory($result)) {
+                // Premium and custom plugins have no directory entry. That is a
+                // definitive answer, so cache it and keep the WPScan lookup running.
+                set_transient($cacheKey, self::NOT_IN_DIRECTORY, $this->remoteCacheTtl());
+
+                return false;
+            }
+
             // A temporary directory/API failure must not erase a saved risk or
             // suppress retries for the full successful-response cache period.
             throw new \RuntimeException('WordPress.org plugin information is unavailable.');
@@ -247,6 +259,16 @@ class Scanner
         set_transient($cacheKey, $result, $this->remoteCacheTtl());
 
         return $result;
+    }
+
+    /**
+     * WordPress.org answers an unknown slug with this exact, untranslated API
+     * message. Any other error is treated as temporary.
+     */
+    private function isMissingFromDirectory(object $error): bool
+    {
+        return method_exists($error, 'get_error_message')
+            && trim((string) $error->get_error_message()) === 'Plugin not found.';
     }
 
     private function remoteCacheTtl(): int
